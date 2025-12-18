@@ -21,8 +21,14 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
   // Imágenes
   const [imagen1, setImagen1] = useState<File | null>(null);
   const [imagen2, setImagen2] = useState<File | null>(null);
+  const [imagen3, setImagen3] = useState<File | null>(null);
+  const [imagen4, setImagen4] = useState<File | null>(null);
+  const [imagen5, setImagen5] = useState<File | null>(null);
   const [imagen1Preview, setImagen1Preview] = useState<string>('');
   const [imagen2Preview, setImagen2Preview] = useState<string>('');
+  const [imagen3Preview, setImagen3Preview] = useState<string>('');
+  const [imagen4Preview, setImagen4Preview] = useState<string>('');
+  const [imagen5Preview, setImagen5Preview] = useState<string>('');
 
   const handleImagenChange = (
     file: File | null,
@@ -63,6 +69,18 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
       setError('Debes subir la imagen 2');
       return false;
     }
+    if (!imagen3) {
+      setError('Debes subir la imagen 3');
+      return false;
+    }
+    if (!imagen4) {
+      setError('Debes subir la imagen 4');
+      return false;
+    }
+    if (!imagen5) {
+      setError('Debes subir la imagen 5');
+      return false;
+    }
     return true;
   };
 
@@ -86,6 +104,9 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
       console.log('📋 [CIERRE] Pregunta 3:', pregunta3);
       console.log('📷 [CIERRE] Imagen 1:', imagen1?.name);
       console.log('📷 [CIERRE] Imagen 2:', imagen2?.name);
+      console.log('📷 [CIERRE] Imagen 3:', imagen3?.name);
+      console.log('📷 [CIERRE] Imagen 4:', imagen4?.name);
+      console.log('📷 [CIERRE] Imagen 5:', imagen5?.name);
 
       console.log('✅ [CIERRE] Datos del formulario guardados');
       console.log('🔔 [CIERRE] Enviando notificación de trabajo completado...');
@@ -315,6 +336,150 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
                 <button
                   type="button"
                   onClick={() => handleImagenChange(null, setImagen2, setImagen2Preview)}
+                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Imagen 3 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Imagen 3: Foto del VIN del vehículo
+          </label>
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) =>
+                handleImagenChange(
+                  e.target.files?.[0] || null,
+                  setImagen3,
+                  setImagen3Preview
+                )
+              }
+              className="hidden"
+              id="imagen3-input"
+            />
+            <label
+              htmlFor="imagen3-input"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border border-blue-200"
+            >
+              <Camera className="w-5 h-5" />
+              <span className="text-sm font-medium">
+                {imagen3 ? 'Cambiar foto' : 'Tomar foto'}
+              </span>
+            </label>
+            {imagen3Preview && (
+              <div className="relative">
+                <img
+                  src={imagen3Preview}
+                  alt="Imagen 3"
+                  className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleImagenChange(null, setImagen3, setImagen3Preview)}
+                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Imagen 4 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Imagen 4: Foto del odómetro
+          </label>
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) =>
+                handleImagenChange(
+                  e.target.files?.[0] || null,
+                  setImagen4,
+                  setImagen4Preview
+                )
+              }
+              className="hidden"
+              id="imagen4-input"
+            />
+            <label
+              htmlFor="imagen4-input"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border border-blue-200"
+            >
+              <Camera className="w-5 h-5" />
+              <span className="text-sm font-medium">
+                {imagen4 ? 'Cambiar foto' : 'Tomar foto'}
+              </span>
+            </label>
+            {imagen4Preview && (
+              <div className="relative">
+                <img
+                  src={imagen4Preview}
+                  alt="Imagen 4"
+                  className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleImagenChange(null, setImagen4, setImagen4Preview)}
+                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Imagen 5 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Imagen 5: Foto del exterior del vehículo
+          </label>
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) =>
+                handleImagenChange(
+                  e.target.files?.[0] || null,
+                  setImagen5,
+                  setImagen5Preview
+                )
+              }
+              className="hidden"
+              id="imagen5-input"
+            />
+            <label
+              htmlFor="imagen5-input"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border border-blue-200"
+            >
+              <Camera className="w-5 h-5" />
+              <span className="text-sm font-medium">
+                {imagen5 ? 'Cambiar foto' : 'Tomar foto'}
+              </span>
+            </label>
+            {imagen5Preview && (
+              <div className="relative">
+                <img
+                  src={imagen5Preview}
+                  alt="Imagen 5"
+                  className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleImagenChange(null, setImagen5, setImagen5Preview)}
                   className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
                 >
                   <X className="w-4 h-4" />
