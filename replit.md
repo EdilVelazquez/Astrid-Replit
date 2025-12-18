@@ -31,9 +31,10 @@ project/
 └── package.json
 ```
 
-## Variables de Entorno Requeridas
-- `VITE_SUPABASE_URL` - URL del proyecto Supabase
-- `VITE_SUPABASE_ANON_KEY` - Clave anónima pública de Supabase
+## Variables de Entorno (Configuradas en Replit Secrets)
+- `VITE_SUPABASE_URL` - URL del proyecto Supabase (env var compartida)
+- `VITE_SUPABASE_ANON_KEY` - Clave anónima pública de Supabase (env var compartida)
+- `ZOHO_API_KEY` - API Key de Zoho Inventory (secreto)
 
 ## Comandos
 - `npm run dev` - Servidor de desarrollo
