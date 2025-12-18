@@ -318,6 +318,7 @@ function TechnicianApp() {
       agregarLogConsola('🔄 Reiniciando contexto del servicio...');
 
       dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
+      setPruebasCompletadas(false);
 
       const esNuevoEsnDePrueba = nuevoESN === '000000000000000';
 
@@ -715,6 +716,9 @@ function TechnicianApp() {
       state.expediente_actual.installation_details || ''
     );
 
+    const requiereIgnicionCheck = pruebasActuales.some(p =>
+      p.toLowerCase().includes('ignición') || p.toLowerCase().includes('ignicion')
+    );
     const requiereBotonCheck = pruebasActuales.some(p =>
       p.toLowerCase().includes('botón') || p.toLowerCase().includes('boton') || p.toLowerCase().includes('pánico') || p.toLowerCase().includes('panico')
     );
@@ -724,9 +728,12 @@ function TechnicianApp() {
     const requiereBuzzerCheck = pruebasActuales.some(p =>
       p.toLowerCase().includes('buzzer')
     );
+    const requiereUbicacionCheck = pruebasActuales.some(p =>
+      p.toLowerCase().includes('ubicación') || p.toLowerCase().includes('ubicacion')
+    );
 
-    const ignicionOK = state.ignicion_exitosa;
-    const ubicacionOK = state.ubicacion_exitosa;
+    const ignicionOK = !requiereIgnicionCheck || state.ignicion_exitosa;
+    const ubicacionOK = !requiereUbicacionCheck || state.ubicacion_exitosa;
     const botonOK = !requiereBotonCheck || state.boton_exitoso;
     const pruebasBloqueoOK = !requiereBloqueoCheck || (state.bloqueo_exitoso && state.desbloqueo_exitoso);
     const pruebasBuzzerOK = !requiereBuzzerCheck || (state.buzzer_exitoso && state.buzzer_off_exitoso);

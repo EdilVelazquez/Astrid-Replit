@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { X, QrCode, AlertTriangle, RefreshCcw } from 'lucide-react';
+import { X, QrCode, AlertTriangle, RefreshCcw, Search, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { DEVICE_CHANGE_REASONS } from '../constants/deviceChangeReasons';
 import { QRScanner } from './QRScanner';
+import { buscarEquipoEnInventario } from '../services/zohoInventoryService';
 
 interface DeviceChangeModalProps {
   currentESN: string;
@@ -9,6 +10,13 @@ interface DeviceChangeModalProps {
   appointmentName: string;
   onConfirm: (nuevoESN: string, motivo: string, descripcion: string) => void;
   onClose: () => void;
+}
+
+interface CRMData {
+  id: string;
+  model: string;
+  IMEI: string;
+  linea: string;
 }
 
 export function DeviceChangeModal({
@@ -23,13 +31,28 @@ export function DeviceChangeModal({
   const [descripcion, setDescripcion] = useState('');
   const [mostrarQRScanner, setMostrarQRScanner] = useState(false);
   const [errorValidacion, setErrorValidacion] = useState('');
+  
+  const [consultandoCRM, setConsultandoCRM] = useState(false);
+  const [crmConsultado, setCrmConsultado] = useState(false);
+  const [datosCRM, setDatosCRM] = useState<CRMData | null>(null);
+  const [errorCRM, setErrorCRM] = useState<string | null>(null);
 
   const handleQRScanSuccess = (decodedText: string) => {
     setNuevoESN(decodedText);
     setMostrarQRScanner(false);
+    setCrmConsultado(false);
+    setDatosCRM(null);
+    setErrorCRM(null);
   };
 
-  const validarFormulario = (): boolean => {
+  const handleESNChange = (value: string) => {
+    setNuevoESN(value);
+    setCrmConsultado(false);
+    setDatosCRM(null);
+    setErrorCRM(null);
+  };
+
+  const validarFormularioParaConsulta = (): boolean => {
     if (!nuevoESN.trim()) {
       setErrorValidacion('Debe ingresar el nuevo ESN');
       return false;
@@ -39,6 +62,12 @@ export function DeviceChangeModal({
       setErrorValidacion('El nuevo ESN debe ser diferente al actual');
       return false;
     }
+
+    return true;
+  };
+
+  const validarFormularioCompleto = (): boolean => {
+    if (!validarFormularioParaConsulta()) return false;
 
     if (!motivo) {
       setErrorValidacion('Debe seleccionar un motivo para el cambio');
@@ -53,10 +82,39 @@ export function DeviceChangeModal({
     return true;
   };
 
+  const handleConsultarCRM = async () => {
+    setErrorValidacion('');
+
+    if (!validarFormularioParaConsulta()) {
+      return;
+    }
+
+    setConsultandoCRM(true);
+    setDatosCRM(null);
+    setErrorCRM(null);
+
+    try {
+      const resultado = await buscarEquipoEnInventario(nuevoESN.trim());
+      
+      if (resultado.success && resultado.data) {
+        setDatosCRM(resultado.data);
+        setCrmConsultado(true);
+      } else {
+        setErrorCRM(resultado.error || 'No se encontró información del equipo');
+        setCrmConsultado(true);
+      }
+    } catch (error) {
+      setErrorCRM('Error al consultar el CRM');
+      setCrmConsultado(true);
+    } finally {
+      setConsultandoCRM(false);
+    }
+  };
+
   const handleConfirmar = () => {
     setErrorValidacion('');
 
-    if (!validarFormulario()) {
+    if (!validarFormularioCompleto()) {
       return;
     }
 
@@ -116,7 +174,7 @@ export function DeviceChangeModal({
                 <input
                   type="text"
                   value={nuevoESN}
-                  onChange={(e) => setNuevoESN(e.target.value)}
+                  onChange={(e) => handleESNChange(e.target.value)}
                   placeholder="Ingresa o escanea el nuevo ESN"
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -127,8 +185,65 @@ export function DeviceChangeModal({
                   <QrCode className="w-5 h-5" />
                   QR
                 </button>
+                <button
+                  onClick={handleConsultarCRM}
+                  disabled={consultandoCRM || !nuevoESN.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {consultandoCRM ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Search className="w-5 h-5" />
+                  )}
+                  Verificar
+                </button>
               </div>
             </div>
+
+            {crmConsultado && (
+              <div className={`rounded-lg p-4 border-2 ${datosCRM ? 'bg-green-50 border-green-300' : 'bg-amber-50 border-amber-300'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  {datosCRM ? (
+                    <>
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="font-semibold text-green-800">Dispositivo encontrado en CRM</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-5 h-5 text-amber-600" />
+                      <span className="font-semibold text-amber-800">Dispositivo no encontrado en CRM</span>
+                    </>
+                  )}
+                </div>
+                
+                {datosCRM ? (
+                  <div className="bg-white rounded-lg p-3 space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-600">ID Zoho:</span>
+                        <span className="ml-2 text-gray-900">{datosCRM.id}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">Modelo:</span>
+                        <span className="ml-2 text-gray-900 font-semibold">{datosCRM.model}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">IMEI:</span>
+                        <span className="ml-2 text-gray-900 font-mono">{datosCRM.IMEI}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">Línea SIM:</span>
+                        <span className="ml-2 text-gray-900">{datosCRM.linea}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-amber-700">
+                    {errorCRM || 'El ESN no fue encontrado en el inventario de Zoho. Puede continuar pero sin datos automáticos del CRM.'}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -178,7 +293,8 @@ export function DeviceChangeModal({
             </button>
             <button
               onClick={handleConfirmar}
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center gap-2"
+              disabled={!crmConsultado}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCcw className="w-5 h-5" />
               Confirmar Cambio
