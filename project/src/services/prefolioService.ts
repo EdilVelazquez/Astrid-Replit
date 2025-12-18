@@ -420,6 +420,11 @@ export async function eliminarPrefolioCompleto(
         prefolio_modelo_dispositivo: null,
         prefolio_imei_dispositivo: null,
         prefolio_telefono_sim: null,
+        device_esn: null,
+        zoho_inventory_id: null,
+        validation_start_timestamp: null,
+        validation_final_status: null,
+        status: 'Pendiente',
         updated_at: new Date().toISOString(),
       })
       .eq('id', expedienteId);
