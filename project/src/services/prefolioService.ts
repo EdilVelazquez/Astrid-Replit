@@ -11,6 +11,7 @@ const PHOTO_FIELD_NAMES = {
   ODOMETRO: 'foto_odometro',
   VIN: 'foto_vin',
   PLACAS: 'foto_placas',
+  TABLERO: 'foto_tablero',
 } as const;
 
 export async function guardarPrefolioDatos(
@@ -182,7 +183,8 @@ export async function guardarPrefolioFotos(
   fotosVehiculo: File[],
   fotoOdometro: File | null,
   fotoVin: File | null,
-  fotoPlacas: File | null
+  fotoPlacas: File | null,
+  fotoTablero: File | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('📸 Iniciando guardado de todas las fotos:', {
@@ -191,6 +193,7 @@ export async function guardarPrefolioFotos(
       tieneFotoOdometro: !!fotoOdometro,
       tieneFotoVin: !!fotoVin,
       tieneFotoPlacas: !!fotoPlacas,
+      tieneFotoTablero: !!fotoTablero,
     });
 
     const uploadResults: Array<{ success: boolean; campo: string; error?: string }> = [];
@@ -264,6 +267,24 @@ export async function guardarPrefolioFotos(
 
       if (!result.success) {
         console.error('❌ Error subiendo foto de las placas:', result.error);
+      }
+    }
+
+    if (fotoTablero) {
+      console.log('📸 Subiendo foto del tablero...');
+      const result = await subirFotoPrefolio(
+        expedienteId,
+        PHOTO_FIELD_NAMES.TABLERO,
+        fotoTablero
+      );
+      uploadResults.push({
+        success: result.success,
+        campo: PHOTO_FIELD_NAMES.TABLERO,
+        error: result.error,
+      });
+
+      if (!result.success) {
+        console.error('❌ Error subiendo foto del tablero:', result.error);
       }
     }
 

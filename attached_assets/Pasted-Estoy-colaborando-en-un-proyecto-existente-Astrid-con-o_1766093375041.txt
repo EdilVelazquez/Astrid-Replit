@@ -1,0 +1,39 @@
+Estoy colaborando en un proyecto existente (Astrid) con otra persona. Necesito que trabajemos en paralelo y al final haremos un merge de mi trabajo hacia la rama principal, así que:
+
+Respeta al 100% el código actual: no refactorices, no renombres archivos, no cambies estilos globales, no cambies rutas existentes, no modifiques lógica de agenda ni autenticación. Haz cambios mínimos e incrementales.
+
+Implementa este feature como un nuevo módulo aislado (carpeta/ruta/componentes nuevos). Si necesitas tocar un archivo existente, que sea solo para agregar un link/botón de navegación y/o registrar la ruta.
+
+No conectes a base de datos, no llames APIs, no uses secrets, no extraigas información real. Todo debe ser mock/ficticio en memoria (arrays/fixtures) para visualizar cómo quedará. (Esto es importante para evitar afectar producción y para facilitar el merge).
+
+Agrega un botón/enlace de navegación en la página principal, a un lado de “Agenda”, con el texto: “Mis servicios” (o “Historial de servicios”, si cabe mejor). Al hacer clic, debe llevar al nuevo módulo.
+
+El nuevo módulo debe mostrar un listado de servicios realizados por el técnico, ordenados por fecha desc, identificados por un compuesto Work Order + Appointment (AP) (muéstralo como “WO-XXXX / AP-YYYY”).
+
+En el listado, por cada registro muestra (mock):
+
+ID compuesto: WO/AP
+
+Fecha
+
+Tipo de servicio (instalación / revisión / etc.)
+
+Monto (MXN)
+
+Estatus de pago: Pagado / Pendiente
+
+Incluye un botón principal “Subir factura” (solo UI, sin backend) que abra un modal o pantalla simple con:
+
+Input para “archivo” (solo front; no subir a storage)
+
+Lista de servicios mock seleccionables (checkbox)
+
+Un “total seleccionado” calculado en UI con los montos mock
+
+Botón “Enviar” que por ahora solo muestre confirmación en UI (sin persistir nada).
+
+Agrega un archivo de datos mock (por ejemplo mockServices.ts|js) y consume ese mock desde el módulo.
+
+Antes de aplicar cambios, muéstrame un plan breve de archivos nuevos/modificados.
+
+Contexto: este módulo es el “Portal del técnico” para consultar historial y, más adelante, hacer cobrables servicios mediante factura. Recalco: solo prototipo visual con datos ficticios en esta primera iteración.

@@ -63,6 +63,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
   const [fotoOdometro, setFotoOdometro] = useState<File | null>(null);
   const [fotoVin, setFotoVin] = useState<File | null>(null);
   const [fotoPlacas, setFotoPlacas] = useState<File | null>(null);
+  const [fotoTablero, setFotoTablero] = useState<File | null>(null);
 
   const [marcas, setMarcas] = useState<VehicleBrand[]>([]);
   const [modelos, setModelos] = useState<VehicleModel[]>([]);
@@ -358,6 +359,12 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
     }
   };
 
+  const handleFotoTableroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFotoTablero(e.target.files[0]);
+    }
+  };
+
   const buscarEquipoEnInventarioAhora = async (esnValue: string) => {
     console.log('🔎 [PrefolioForm] Iniciando búsqueda con ESN:', esnValue);
 
@@ -471,6 +478,10 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
       setError('Debe subir la foto del odómetro');
       return false;
     }
+    if (!fotoTablero) {
+      setError('Debe subir la foto del tablero');
+      return false;
+    }
     if (!fotoVin && !vinManualEnabled) {
       setError('Debe tomar una foto del VIN o usar la opción de captura manual');
       return false;
@@ -550,7 +561,8 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
         fotosVehiculo,
         fotoOdometro,
         fotoVin,
-        fotoPlacas
+        fotoPlacas,
+        fotoTablero
       );
 
       if (!resultadoFotos.success) {
@@ -1114,6 +1126,29 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
                 </label>
                 <span className="text-sm text-gray-600">
                   {fotoOdometro ? fotoOdometro.name : 'No se eligió ningún archivo'}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Foto del Tablero *
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+                  <FileImage className="w-4 h-4" />
+                  <span className="text-sm">Tomar/Elegir foto</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFotoTableroChange}
+                    className="hidden"
+                    required
+                  />
+                </label>
+                <span className="text-sm text-gray-600">
+                  {fotoTablero ? fotoTablero.name : 'No se eligió ningún archivo'}
                 </span>
               </div>
             </div>
