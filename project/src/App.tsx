@@ -319,6 +319,7 @@ function TechnicianApp() {
 
       dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
       setPruebasCompletadas(false);
+      setMostrarFormularioCierre(false);
 
       const esNuevoEsnDePrueba = nuevoESN === '000000000000000';
 
