@@ -401,7 +401,17 @@ function TechnicianApp() {
 
     if (resultado.success) {
       agregarLogConsola('✅ Servicio reiniciado correctamente');
+      
+      // RESET COMPLETO DE TODOS LOS ESTADOS
       setPrefolioCompletado(false);
+      setPruebasCompletadas(false);
+      setMostrarFormularioCierre(false);
+      setServicioFinalizado(false);
+      setValidationSummary(null);
+      setEsnTemporal('');
+      setErrorPanel('');
+      setMostrarQRScanner(false);
+      
       dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
       dispatch({ type: 'SET_EXPEDIENTE', payload: null as any });
 
@@ -493,12 +503,18 @@ function TechnicianApp() {
   }, [user, serviciosCargados]);
 
   useEffect(() => {
+    // RESET COMPLETO al cambiar de expediente
     setEsnTemporal('');
     setServicioFinalizado(false);
     setValidationSummary(null);
     setMostrarQRScanner(false);
     setErrorPanel('');
     setPrefolioCompletado(false);
+    setPruebasCompletadas(false);
+    setMostrarFormularioCierre(false);
+    
+    // Reset del store de pruebas
+    dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
 
     const cargarEstadoGuardado = async () => {
       if (!state.expediente_actual) return;
@@ -689,16 +705,32 @@ function TechnicianApp() {
         if (exitoReinicio) {
           agregarLogConsola('✅ Servicio de pruebas reiniciado - listo para nueva ejecución');
           agregarLogConsola('🔄 El servicio está disponible nuevamente en el día de hoy');
+          agregarLogConsola('📋 Regresando al calendario para nueva selección...');
+
+          // RESET COMPLETO de estados locales
+          setPrefolioCompletado(false);
+          setPruebasCompletadas(false);
+          setMostrarFormularioCierre(false);
+          setServicioFinalizado(false);
+          setValidationSummary(null);
+          setEsnTemporal('');
+          setErrorPanel('');
+          
+          dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
+          dispatch({ type: 'SET_EXPEDIENTE', payload: null as any });
 
           // Actualizar la lista de servicios para reflejar el reinicio
           if (user?.email) {
             const servicios = await obtenerTodosLosServiciosPorEmailTecnico(user.email);
             setTodosLosServicios(servicios);
           }
+          
+          // Regresar al calendario
+          setMostrarCalendario(true);
         } else {
           agregarLogConsola('❌ Error al reiniciar servicio de pruebas');
         }
-      }, 2000);
+      }, 3000);
     }
 
     if (user?.email) {
