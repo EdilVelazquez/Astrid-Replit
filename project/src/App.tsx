@@ -319,11 +319,20 @@ function TechnicianApp() {
 
       dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
 
+      const esNuevoEsnDePrueba = nuevoESN === '000000000000000';
+
       setTimeout(() => {
         dispatch({ type: 'SET_ESN', payload: nuevoESN });
         agregarLogConsola('✅ Contexto del servicio reiniciado completamente');
         agregarLogConsola('🚀 Listo para iniciar pruebas con el nuevo dispositivo');
-        agregarLogConsola('🟢 Iniciando consulta inmediata y polling automático (60s, máx 10 intentos)');
+        
+        if (esNuevoEsnDePrueba) {
+          agregarLogConsola('🧪 ESN de prueba detectado - avance manual habilitado');
+          agregarLogConsola('📝 Use los botones de marcado manual para completar cada prueba');
+        } else {
+          agregarLogConsola('🟢 Iniciando consulta inmediata y polling automático (60s, máx 10 intentos)');
+        }
+        
         agregarLogConsola('✅ Cambio de dispositivo completado exitosamente');
       }, 100);
 

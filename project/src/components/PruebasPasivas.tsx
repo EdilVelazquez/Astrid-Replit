@@ -68,6 +68,29 @@ export function PruebasPasivas({
   const requiereIgnicion = pruebasRequeridas.includes('Ignición');
   const requiereBoton = pruebasRequeridas.includes('Botón de pánico');
   const requiereUbicacion = pruebasRequeridas.includes('Ubicación');
+  const esModoEspecial = esn === '000000000000000';
+
+  const marcarPruebaManual = (tipo: 'ignicion' | 'boton' | 'ubicacion') => {
+    const fechaISO = new Date().toISOString();
+    if (tipo === 'ignicion') {
+      onSetIgnicionExitosa(true);
+      if (onLogConsola) {
+        onLogConsola('🧪 [MANUAL] Ignición marcada como exitosa');
+      }
+    } else if (tipo === 'boton') {
+      onSetBotonFechaPreguntada(fechaISO);
+      onSetBotonExitoso(true);
+      if (onLogConsola) {
+        onLogConsola('🧪 [MANUAL] Botón de pánico marcado como exitoso');
+      }
+    } else if (tipo === 'ubicacion') {
+      onSetUbicacionFechaPreguntada(fechaISO);
+      onSetUbicacionExitosa(true);
+      if (onLogConsola) {
+        onLogConsola('🧪 [MANUAL] Ubicación marcada como exitosa');
+      }
+    }
+  };
 
   useEffect(() => {
     const handlePassiveTestResult = (event: Event) => {
@@ -312,8 +335,20 @@ export function PruebasPasivas({
             </div>
             {ignicionExitosa ? (
               <div className="bg-green-50 p-3 rounded border border-green-200">
-                <p className="text-sm text-green-800 font-medium">✓ Ignición detectada automáticamente</p>
-                <p className="text-xs text-green-700 mt-1">El sistema detectó IGNICION=1</p>
+                <p className="text-sm text-green-800 font-medium">✓ Ignición {esModoEspecial ? 'marcada manualmente' : 'detectada automáticamente'}</p>
+                <p className="text-xs text-green-700 mt-1">{esModoEspecial ? 'Modo de prueba' : 'El sistema detectó IGNICION=1'}</p>
+              </div>
+            ) : esModoEspecial ? (
+              <div className="bg-purple-50 p-3 rounded border border-purple-200">
+                <p className="text-sm text-purple-800 mb-2">
+                  🧪 Modo de prueba - Marcar manualmente
+                </p>
+                <button
+                  onClick={() => marcarPruebaManual('ignicion')}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                >
+                  ✓ Marcar Ignición como exitosa
+                </button>
               </div>
             ) : (
               <div className="bg-blue-50 p-3 rounded border border-blue-200">
@@ -335,7 +370,19 @@ export function PruebasPasivas({
             </div>
             {botonExitoso ? (
               <div className="bg-green-50 p-3 rounded border border-green-200">
-                <p className="text-sm text-green-800">✓ Prueba exitosa</p>
+                <p className="text-sm text-green-800">✓ Prueba exitosa {esModoEspecial ? '(marcada manualmente)' : ''}</p>
+              </div>
+            ) : esModoEspecial ? (
+              <div className="bg-purple-50 p-3 rounded border border-purple-200">
+                <p className="text-sm text-purple-800 mb-2">
+                  🧪 Modo de prueba - Marcar manualmente
+                </p>
+                <button
+                  onClick={() => marcarPruebaManual('boton')}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                >
+                  ✓ Marcar Botón de pánico como exitoso
+                </button>
               </div>
             ) : preguntaBoton ? (
               <div className="space-y-3">
@@ -383,8 +430,20 @@ export function PruebasPasivas({
             </div>
             {ubicacionExitosa ? (
               <div className="bg-green-50 p-3 rounded border border-green-200">
-                <p className="text-sm text-green-800 font-medium">✓ Ubicación confirmada</p>
-                <p className="text-xs text-green-700 mt-1">Coordenadas válidas con fecha reciente</p>
+                <p className="text-sm text-green-800 font-medium">✓ Ubicación confirmada {esModoEspecial ? '(marcada manualmente)' : ''}</p>
+                <p className="text-xs text-green-700 mt-1">{esModoEspecial ? 'Modo de prueba' : 'Coordenadas válidas con fecha reciente'}</p>
+              </div>
+            ) : esModoEspecial ? (
+              <div className="bg-purple-50 p-3 rounded border border-purple-200">
+                <p className="text-sm text-purple-800 mb-2">
+                  🧪 Modo de prueba - Marcar manualmente
+                </p>
+                <button
+                  onClick={() => marcarPruebaManual('ubicacion')}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                >
+                  ✓ Marcar Ubicación como exitosa
+                </button>
               </div>
             ) : preguntaUbicacion ? (
               <div className="space-y-3">

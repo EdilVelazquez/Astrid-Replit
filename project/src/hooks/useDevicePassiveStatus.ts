@@ -149,34 +149,15 @@ export function useDevicePassiveStatus(
 
       let estatusData: EstatusGralResponse;
 
-      // Modo de pruebas para ESN especial
+      // Modo de pruebas para ESN especial - no consultar servidor, permitir avance manual
       if (currentEsn === '000000000000000') {
         if (onLogConsolaRef.current) {
-          onLogConsolaRef.current(`🧪 [PRUEBAS] Modo de pruebas activado - simulando respuesta del servidor`);
+          onLogConsolaRef.current(`🧪 [PRUEBAS] ESN de prueba - omitiendo consulta al servidor`);
+          onLogConsolaRef.current(`📝 [PRUEBAS] Use los botones de marcado manual para completar cada prueba`);
         }
-
-        // Simular un pequeño delay para hacer más realista
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Simular respuesta del servidor con datos de prueba
-        const ahora = new Date();
-        estatusData = {
-          response: [
-            {
-              ESN: '000000000000000',
-              fecha: ahora.toISOString(),
-              inputs: {
-                ignition: '1',
-              },
-              latitude: '19.432608',
-              longitude: '-99.133209',
-            }
-          ]
-        };
-
-        if (onLogConsolaRef.current) {
-          onLogConsolaRef.current(`🧪 [PRUEBAS] Datos simulados: ${JSON.stringify(estatusData, null, 2)}`);
-        }
+        consultaEnProcesoRef.current = false;
+        setState((prev) => ({ ...prev, consultando: false }));
+        return;
       } else {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -524,7 +505,7 @@ export function useDevicePassiveStatus(
         pollingActivoRef.current = false;
       }
       if (onLogConsolaRef.current) {
-        onLogConsolaRef.current(`🧪 ESN especial detectado - Polling desactivado (simulación automática activa)`);
+        onLogConsolaRef.current(`🧪 ESN de prueba detectado - Polling desactivado (avance manual habilitado)`);
       }
       return;
     }
