@@ -17,18 +17,9 @@ export async function buscarEquipoEnInventario(esn: string): Promise<BusquedaInv
   try {
     console.log('🔍 [ZOHO] Buscando equipo en inventario con ESN:', esn);
 
-    // Modo de pruebas para ESN especial
-    if (esn === '000000000000000') {
-      console.log('🧪 [ZOHO] Modo de pruebas activado - simulando respuesta exitosa');
-      return {
-        success: true,
-        data: {
-          id: 'TEST-ID-123456789',
-          model: 'DISPOSITIVO DE PRUEBA',
-          IMEI: '999999999999999',
-          linea: '5555555555',
-        },
-      };
+    const esModoEspecial = esn === '000000000000000';
+    if (esModoEspecial) {
+      console.log('🧪 [ZOHO] ESN de prueba detectado - ejecutando petición real a Zoho CRM');
     }
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;

@@ -366,12 +366,9 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
       return;
     }
 
-    if (esnValue === '000000000000000') {
-      console.log('⚠️ [PrefolioForm] ESN de prueba detectado');
-      setEsn(esnValue);
-      setEquipoBuscado(true);
-      setEquipoEncontradoEnCRM(false);
-      return;
+    const esModoEspecial = esnValue === '000000000000000';
+    if (esModoEspecial) {
+      console.log('🧪 [PrefolioForm] ESN de prueba detectado - consultando Zoho CRM normalmente');
     }
 
     setBuscandoEquipo(true);

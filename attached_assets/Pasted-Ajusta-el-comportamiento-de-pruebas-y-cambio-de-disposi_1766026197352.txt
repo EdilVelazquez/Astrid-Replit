@@ -1,0 +1,69 @@
+Ajusta el comportamiento de pruebas y cambio de dispositivo considerando el ESN de prueba 000000000000000, manteniendo el mismo flujo que un ESN real, con las siguientes reglas claras:
+
+ESN de prueba 000000000000000
+
+Cuando el ESN sea 000000000000000:
+
+Sí debe ejecutarse la petición a Zoho CRM para:
+
+Validar y obtener datos (modelo, IMEI, línea, etc.).
+
+Mostrar y prerrellenar esos datos como en cualquier ESN real.
+
+Las pruebas (activas y pasivas) deben:
+
+Mostrarse y ejecutarse igual que con un ESN real.
+
+Permitirme avanzar paso a paso manualmente, marcando cada paso.
+
+Lo único que se debe omitir es:
+
+La petición/envío al servidor principal durante la ejecución de pruebas.
+
+El tiempo de espera de respuesta del servidor.
+
+El resultado para este ESN de prueba debe ser positivo sí o sí, permitiendo completar el flujo completo.
+
+Pruebas pasivas
+
+Las pruebas pasivas deben:
+
+Ejecutarse y mostrarse como en un caso real.
+
+Con el ESN de prueba, no deben bloquearse por espera de servidor.
+
+Permitirme continuar el flujo normalmente.
+
+Cambiar dispositivo
+
+Al usar Cambiar dispositivo después de haber llenado el formulario:
+
+Debe volver a ejecutarse la petición a Zoho CRM con el nuevo ESN.
+
+Los datos obtenidos deben:
+
+Mostrarse nuevamente en el mismo modal al aceptar el cambio.
+
+Prerrellenarse como si fuera una captura nueva.
+
+Deben reiniciarse todas las pruebas desde cero (activas y pasivas).
+
+El sistema debe tratarlo como:
+
+Un dispositivo completamente nuevo.
+
+Sin conservar resultados ni estados del dispositivo anterior.
+
+Si el nuevo ESN vuelve a ser 000000000000000:
+
+Debe aplicar nuevamente el comportamiento de prueba:
+
+Resultados positivos.
+
+Avance manual.
+
+Sin espera ni envío al servidor principal.
+
+Aun así, no se debe permitir avanzar sin pasar por las pruebas correspondientes.
+
+El objetivo es que el ESN de prueba permita validar y recorrer todo el flujo completo, igual que un ESN real, y que Cambiar dispositivo reinicie correctamente datos y pruebas, manteniendo coherencia y control del proceso.

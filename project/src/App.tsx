@@ -129,9 +129,10 @@ function TechnicianApp() {
         agregarLogConsola(`🔄 Status: Pruebas en curso`);
 
         if (esModoEspecial) {
-          // En modo especial, simular flujo completo paso por paso
+          // En modo especial: flujo manual pero sin espera de servidor
           agregarLogConsola(`🧪 MODO ESPECIAL: ESN de prueba detectado`);
-          agregarLogConsola(`✨ Simulando flujo de pruebas automáticamente...`);
+          agregarLogConsola(`📋 Las pruebas se ejecutarán paso a paso manualmente`);
+          agregarLogConsola(`⏭️ Sin espera de servidor - resultados positivos garantizados`);
 
           dispatch({ type: 'SET_ESN', payload: esn });
 
@@ -140,7 +141,7 @@ function TechnicianApp() {
             state.expediente_actual.appointment_name
           );
 
-          // Crear sesión inicial
+          // Crear sesión inicial con todo en false para permitir avance manual
           await crearSesion({
             expediente_id: expedienteId,
             esn: esn,
@@ -159,63 +160,8 @@ function TechnicianApp() {
             last_query_at: null
           });
 
-          // Simular pruebas pasivas en orden: ignición → botón → ubicación
-          // Paso 1: Ignición (después de 300ms)
-          setTimeout(async () => {
-            agregarLogConsola(`🔥 Simulando: Ignición detectada`);
-            dispatch({ type: 'SET_IGNICION_EXITOSA', payload: true });
-            await actualizarSesion(expedienteId, { ignicion_exitosa: true });
-          }, 300);
-
-          // Paso 2: Botón de pánico (después de 600ms)
-          setTimeout(async () => {
-            agregarLogConsola(`🆘 Simulando: Botón de pánico activado`);
-            dispatch({ type: 'SET_BOTON_EXITOSO', payload: true });
-            await actualizarSesion(expedienteId, {
-              boton_exitoso: true,
-              boton_fecha_preguntada: new Date().toISOString()
-            });
-          }, 600);
-
-          // Paso 3: Ubicación (después de 900ms)
-          setTimeout(async () => {
-            agregarLogConsola(`📍 Simulando: Ubicación confirmada`);
-            dispatch({ type: 'SET_UBICACION_EXITOSA', payload: true });
-            await actualizarSesion(expedienteId, {
-              ubicacion_exitosa: true,
-              ubicacion_fecha_preguntada: new Date().toISOString()
-            });
-          }, 900);
-
-          // Paso 4: Pruebas activas - Bloqueo (después de 1200ms)
-          setTimeout(async () => {
-            agregarLogConsola(`🔒 Simulando: Bloqueo ejecutado exitosamente`);
-            dispatch({ type: 'SET_BLOQUEO_EXITOSO', payload: true });
-            await actualizarSesion(expedienteId, { bloqueo_exitoso: true });
-          }, 1200);
-
-          // Paso 5: Desbloqueo (después de 1500ms)
-          setTimeout(async () => {
-            agregarLogConsola(`🔓 Simulando: Desbloqueo ejecutado exitosamente`);
-            dispatch({ type: 'SET_DESBLOQUEO_EXITOSO', payload: true });
-            await actualizarSesion(expedienteId, { desbloqueo_exitoso: true });
-          }, 1500);
-
-          // Paso 6: Buzzer ON (después de 1800ms)
-          setTimeout(async () => {
-            agregarLogConsola(`🔔 Simulando: Buzzer activado exitosamente`);
-            dispatch({ type: 'SET_BUZZER_EXITOSO', payload: true });
-            await actualizarSesion(expedienteId, { buzzer_exitoso: true });
-          }, 1800);
-
-          // Paso 7: Buzzer OFF (después de 2100ms)
-          setTimeout(async () => {
-            agregarLogConsola(`🔕 Simulando: Buzzer desactivado exitosamente`);
-            dispatch({ type: 'SET_BUZZER_OFF_EXITOSO', payload: true });
-            await actualizarSesion(expedienteId, { buzzer_off_exitoso: true });
-            agregarLogConsola(`✅ Todas las pruebas completadas exitosamente`);
-            agregarLogConsola(`🚗 Listo para capturar datos del vehículo`);
-          }, 2100);
+          agregarLogConsola(`🟢 Sesión de pruebas creada - avance manual habilitado`);
+          agregarLogConsola(`📝 Ejecuta cada prueba para marcarla como completada`);
 
         } else {
           // Flujo normal: iniciar polling de pruebas pasivas
