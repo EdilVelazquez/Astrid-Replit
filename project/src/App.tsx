@@ -17,9 +17,10 @@ import { enviarDatosFinalesWebhook } from './services/webhookService';
 import { reiniciarServicioDePruebas, esServicioDePruebas } from './services/testServiceService';
 import { buscarEquipoEnInventario } from './services/zohoInventoryService';
 import { useAuth } from './contexts/AuthContext';
-import { Clipboard, X, Send, Activity, QrCode, CheckCircle2, LogOut, RefreshCcw, Calendar } from 'lucide-react';
+import { Clipboard, X, Send, Activity, QrCode, CheckCircle2, LogOut, RefreshCcw, Calendar, FileText } from 'lucide-react';
 import { ValidationSummaryJSON, ExpedienteServicio } from './types';
 import { supabase } from './supabaseClient';
+import { MisServicios } from './components/misServicios/MisServicios';
 
 function formatearFechaLocal(fecha: Date): string {
   const year = fecha.getFullYear();
@@ -54,6 +55,7 @@ function TechnicianApp() {
   const [todosLosServicios, setTodosLosServicios] = useState<ExpedienteServicio[]>([]);
   const [pruebasCompletadas, setPruebasCompletadas] = useState(false);
   const [mostrarFormularioCierre, setMostrarFormularioCierre] = useState(false);
+  const [mostrarMisServicios, setMostrarMisServicios] = useState(false);
 
 
   const handleQRScanSuccess = (decodedText: string) => {
@@ -789,7 +791,7 @@ function TechnicianApp() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
-              {!mostrarCalendario && (
+              {!mostrarCalendario && !mostrarMisServicios && (
                 <button
                   onClick={async () => {
                     if (user?.email) {
@@ -803,6 +805,19 @@ function TechnicianApp() {
                 >
                   <Calendar className="w-5 h-5" />
                   <span className="hidden sm:inline">Mi Agenda</span>
+                </button>
+              )}
+              {!mostrarMisServicios && (
+                <button
+                  onClick={() => {
+                    setMostrarMisServicios(true);
+                    setMostrarCalendario(false);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                  title="Ver historial de servicios"
+                >
+                  <FileText className="w-5 h-5" />
+                  <span className="hidden sm:inline">Mis Servicios</span>
                 </button>
               )}
               {contadorRequests > 0 && (
@@ -834,7 +849,14 @@ function TechnicianApp() {
           </div>
         </header>
 
-        {mostrarCalendario ? (
+        {mostrarMisServicios ? (
+          <MisServicios
+            onVolver={() => {
+              setMostrarMisServicios(false);
+              setMostrarCalendario(true);
+            }}
+          />
+        ) : mostrarCalendario ? (
           <CalendarioTecnico
             servicios={todosLosServicios}
             onSeleccionarServicio={handleSeleccionarServicioDesdeCalendario}
