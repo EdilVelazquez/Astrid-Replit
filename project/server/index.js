@@ -17,6 +17,11 @@ if (!supabaseUrl || !supabaseKey) {
   process.exit(1);
 }
 
+if (!API_KEY) {
+  console.error('Missing API_METRICS_KEY - API will not accept authenticated requests');
+  process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const authenticateApiKey = (req, res, next) => {
