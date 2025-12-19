@@ -55,3 +55,29 @@ project/
 - La app requiere conexión a un proyecto Supabase externo existente
 - Las migraciones en `/supabase/migrations/` definen el esquema de BD
 - Puerto de desarrollo: 5000
+
+## API de Métricas (OpenAPI)
+Servidor Express separado que expone métricas de la plataforma.
+
+### Endpoints
+- `GET /api/metrics/openapi.json` - Especificación OpenAPI 3.0 (público)
+- `GET /api/metrics/impact` - Métricas de impacto (requiere autenticación)
+- `GET /health` - Health check
+
+### Autenticación
+Bearer token en header Authorization:
+```
+Authorization: Bearer <API_METRICS_KEY>
+```
+
+### Servidor
+- Puerto: 3001
+- Código: `project/server/index.js`
+- Workflow: "Metrics API"
+
+### Métricas expuestas
+- Total de servicios/expedientes
+- Servicios completados, en progreso, pendientes
+- Técnicos activos
+- Tasa de completado
+- Promedio de duración de servicios

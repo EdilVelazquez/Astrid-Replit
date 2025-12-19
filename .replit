@@ -18,6 +18,10 @@ author = "agent"
 task = "workflow.run"
 args = "Frontend"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Metrics API"
+
 [[workflows.workflow]]
 name = "Frontend"
 author = "agent"
@@ -29,6 +33,22 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "Metrics API"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd project/server && node index.js"
+waitForPort = 3001
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
 
 [[ports]]
 localPort = 5000
@@ -47,3 +67,4 @@ externalPort = 3001
 [userenv.shared]
 VITE_SUPABASE_URL = "https://yuvfockpxcvczcoworks.supabase.co"
 VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1dmZvY2tweGN2Y3pjb3dvcmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1MjA5NjksImV4cCI6MjA3MjA5Njk2OX0.iCQvZRy4iMT-tJMrnI-oDXkKn69BSKv5NkzWrGCHheU"
+API_METRICS_KEY = "ded7fa10241361069b7c095016135a3a2a8b9e1d4d905b5dd1ef693dc27cb7af"
