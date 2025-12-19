@@ -75,9 +75,25 @@ Authorization: Bearer <API_METRICS_KEY>
 - Código: `project/server/index.js`
 - Workflow: "Metrics API"
 
-### Métricas expuestas
-- Total de servicios/expedientes
-- Servicios completados, en progreso, pendientes
-- Técnicos activos
+### Métricas expuestas (v2.0)
+**Servicios:**
+- Total, completados, en progreso, pendientes
+- Con prefolio, cambios de dispositivo
+- Servicios hoy, servicios última semana
+- Desglose por: tipo, ciudad, empresa, estado de validación
+
+**Pruebas de dispositivos:**
+- Total sesiones, sesiones activas
+- Intentos promedio
+- Tasas de éxito: ignición, botón pánico, ubicación, bloqueo, desbloqueo, buzzer
+
+**Usuarios:**
+- Total, activos, por rol
+
+**Vehículos:**
+- Marcas y modelos registrados
+- Servicios por marca de vehículo
+
+**Eficiencia:**
 - Tasa de completado
 - Promedio de duración de servicios
