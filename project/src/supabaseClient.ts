@@ -9,20 +9,18 @@ export const supabaseError = !supabaseConfigured
   ? 'Configuración de Supabase incompleta. Verifica las variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.'
   : null;
 
-const createSupabaseClient = (): SupabaseClient | null => {
-  if (!supabaseConfigured) {
-    console.error('Supabase not configured:', supabaseError);
-    return null;
-  }
-  
-  return createClient(supabaseUrl, supabaseAnonKey, {
+const PLACEHOLDER_URL = 'https://placeholder.supabase.co';
+const PLACEHOLDER_KEY = 'placeholder-key';
+
+export const supabase: SupabaseClient = createClient(
+  supabaseConfigured ? supabaseUrl : PLACEHOLDER_URL,
+  supabaseConfigured ? supabaseAnonKey : PLACEHOLDER_KEY,
+  {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     },
-  });
-};
-
-export const supabase = createSupabaseClient()!;
+  }
+);
