@@ -47,3 +47,9 @@ externalPort = 3001
 [userenv.shared]
 VITE_SUPABASE_URL = "https://yuvfockpxcvczcoworks.supabase.co"
 VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1dmZvY2tweGN2Y3pjb3dvcmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1MjA5NjksImV4cCI6MjA3MjA5Njk2OX0.iCQvZRy4iMT-tJMrnI-oDXkKn69BSKv5NkzWrGCHheU"
+
+[deployment]
+deploymentTarget = "static"
+run = ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port"]
+build = ["bash", "-c", "cd project && npm run build"]
+publicDir = "project/dist"
