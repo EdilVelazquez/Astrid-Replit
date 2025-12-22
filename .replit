@@ -50,5 +50,5 @@ VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 
 [deployment]
 deploymentTarget = "static"
-build = ["bash", "-c", "cd project && npm install && VITE_SUPABASE_URL=$VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY npm run build"]
+build = ["bash", "-c", "cd project && npm install && VITE_SUPABASE_URL=https://yuvfockpxcvczcoworks.supabase.co VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1dmZvY2tweGN2Y3pjb3dvcmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1MjA5NjksImV4cCI6MjA3MjA5Njk2OX0.iCQvZRy4iMT-tJMrnI-oDXkKn69BSKv5NkzWrGCHheU npm run build"]
 publicDir = "project/dist"
