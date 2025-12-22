@@ -55,3 +55,39 @@ project/
 - La app requiere conexión a un proyecto Supabase externo existente
 - Las migraciones en `/supabase/migrations/` definen el esquema de BD
 - Puerto de desarrollo: 5000
+
+## API de Exportación de Datos
+La aplicación incluye una API REST para exportar datos de las tablas de Supabase en tiempo real.
+
+### Endpoints disponibles:
+- `GET /api/health` - Estado del servidor (sin autenticación)
+- `GET /api/tables` - Lista de tablas disponibles (requiere token)
+- `GET /api/export/:table` - Exporta todos los datos de una tabla (requiere token)
+- `GET /api/export/:table/count` - Cuenta de registros en una tabla (requiere token)
+
+### Autenticación:
+Todas las peticiones (excepto /api/health) requieren header:
+```
+Authorization: Bearer <USAGE_EXPORT_TOKEN>
+```
+
+### Tablas disponibles:
+- expedientes_servicio
+- device_test_sessions
+- user_profiles
+- device_changes
+- prefolio_data
+- cierre_data
+- test_services
+
+### Ejemplos de uso:
+```bash
+# Health check
+curl https://tu-dominio/api/health
+
+# Listar tablas
+curl -H "Authorization: Bearer TOKEN" https://tu-dominio/api/tables
+
+# Exportar datos
+curl -H "Authorization: Bearer TOKEN" https://tu-dominio/api/export/expedientes_servicio
+```
