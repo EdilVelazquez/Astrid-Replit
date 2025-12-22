@@ -16,15 +16,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend"
+args = "App"
 
 [[workflows.workflow]]
-name = "Frontend"
+name = "App"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd project && npm run dev"
+args = "cd project && npm run build && node server.js"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -34,14 +34,6 @@ outputType = "webview"
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 5001
-externalPort = 3000
-
-[[ports]]
-localPort = 5002
-externalPort = 3001
-
 [userenv]
 
 [userenv.shared]
@@ -49,6 +41,7 @@ VITE_SUPABASE_URL = "https://yuvfockpxcvczcoworks.supabase.co"
 VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1dmZvY2tweGN2Y3pjb3dvcmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1MjA5NjksImV4cCI6MjA3MjA5Njk2OX0.iCQvZRy4iMT-tJMrnI-oDXkKn69BSKv5NkzWrGCHheU"
 
 [deployment]
-deploymentTarget = "static"
-build = ["bash", "-c", "cd project && npm install && VITE_SUPABASE_URL=https://yuvfockpxcvczcoworks.supabase.co VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1dmZvY2tweGN2Y3pjb3dvcmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1MjA5NjksImV4cCI6MjA3MjA5Njk2OX0.iCQvZRy4iMT-tJMrnI-oDXkKn69BSKv5NkzWrGCHheU npm run build"]
+deploymentTarget = "autoscale"
+build = ["bash", "-c", "cd project && npm install && npm run build"]
 publicDir = "project/dist"
+run = ["bash", "-c", "cd project && node server.js"]
