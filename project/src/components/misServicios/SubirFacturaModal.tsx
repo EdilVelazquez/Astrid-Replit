@@ -1,18 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Upload, FileText, CheckCircle } from 'lucide-react';
-import { ServicioHistorial } from './mockServices';
+import { ServicioParaCobro } from './MisServicios';
 
 interface SubirFacturaModalProps {
-  servicios: ServicioHistorial[];
+  servicios: ServicioParaCobro[];
+  servicioPreseleccionado?: ServicioParaCobro | null;
   onClose: () => void;
 }
 
-export function SubirFacturaModal({ servicios, onClose }: SubirFacturaModalProps) {
+export function SubirFacturaModal({ servicios, servicioPreseleccionado, onClose }: SubirFacturaModalProps) {
   const [archivoSeleccionado, setArchivoSeleccionado] = useState<File | null>(null);
   const [serviciosSeleccionados, setServiciosSeleccionados] = useState<string[]>([]);
   const [enviado, setEnviado] = useState(false);
 
-  const serviciosPendientes = servicios.filter(s => s.estatusPago === 'Pendiente');
+  useEffect(() => {
+    if (servicioPreseleccionado) {
+      setServiciosSeleccionados([servicioPreseleccionado.id]);
+    }
+  }, [servicioPreseleccionado]);
 
   const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -28,7 +33,7 @@ export function SubirFacturaModal({ servicios, onClose }: SubirFacturaModalProps
     );
   };
 
-  const totalSeleccionado = serviciosPendientes
+  const totalSeleccionado = servicios
     .filter(s => serviciosSeleccionados.includes(s.id))
     .reduce((sum, s) => sum + s.monto, 0);
 
@@ -106,13 +111,13 @@ export function SubirFacturaModal({ servicios, onClose }: SubirFacturaModalProps
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Selecciona los servicios a facturar
             </label>
-            {serviciosPendientes.length === 0 ? (
+            {servicios.length === 0 ? (
               <p className="text-gray-500 text-sm text-center py-4 bg-gray-50 rounded-lg">
-                No hay servicios pendientes de pago
+                No hay servicios disponibles para cobro
               </p>
             ) : (
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {serviciosPendientes.map(servicio => (
+                {servicios.map(servicio => (
                   <label
                     key={servicio.id}
                     className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
@@ -130,7 +135,7 @@ export function SubirFacturaModal({ servicios, onClose }: SubirFacturaModalProps
                       />
                       <div>
                         <p className="font-medium text-gray-900">
-                          {servicio.workOrder} - {servicio.appointment}
+                          {servicio.workOrder} / {servicio.appointment}
                         </p>
                         <p className="text-sm text-gray-500">
                           {servicio.tipoServicio} - {new Date(servicio.fecha).toLocaleDateString('es-MX')}
