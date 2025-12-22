@@ -18,7 +18,7 @@ import { buscarEquipoEnInventario } from './services/zohoInventoryService';
 import { useAuth } from './contexts/AuthContext';
 import { Clipboard, X, Activity, CheckCircle2, LogOut, RefreshCcw, Calendar, FileText } from 'lucide-react';
 import { ValidationSummaryJSON, ExpedienteServicio } from './types';
-import { supabase, supabaseConfigured, supabaseError } from './supabaseClient';
+import { supabase, initSupabase, getSupabaseConfigured, getSupabaseError } from './supabaseClient';
 import { MisServicios } from './components/misServicios/MisServicios';
 
 function formatearFechaLocal(fecha: Date): string {
@@ -1218,7 +1218,7 @@ function TechnicianApp() {
   );
 }
 
-function ConfigurationError() {
+function ConfigurationError({ error }: { error: string | null }) {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
@@ -1228,16 +1228,43 @@ function ConfigurationError() {
           </svg>
         </div>
         <h1 className="text-xl font-bold text-gray-800 mb-2">Error de Configuración</h1>
-        <p className="text-gray-600 mb-4">{supabaseError}</p>
+        <p className="text-gray-600 mb-4">{error || 'Configuración de Supabase incompleta.'}</p>
         <p className="text-sm text-gray-500">Contacta al administrador del sistema.</p>
       </div>
     </div>
   );
 }
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
+        <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-gray-600">Cargando configuración...</p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
-  if (!supabaseConfigured) {
-    return <ConfigurationError />;
+  const [loading, setLoading] = useState(true);
+  const [configured, setConfigured] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    initSupabase().then(({ configured, error }) => {
+      setConfigured(configured);
+      setError(error);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (!configured) {
+    return <ConfigurationError error={error} />;
   }
 
   return (
