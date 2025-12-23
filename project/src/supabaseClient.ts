@@ -43,12 +43,10 @@ async function loadConfigFromServer(): Promise<void> {
 }
 
 function createSupabaseClient(): SupabaseClient {
-  if (supabaseInstance) return supabaseInstance;
-  
   const url = hasValidConfig() ? supabaseUrl : PLACEHOLDER_URL;
   const key = hasValidConfig() ? supabaseAnonKey : PLACEHOLDER_KEY;
   
-  supabaseInstance = createClient(url, key, {
+  return createClient(url, key, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -56,13 +54,15 @@ function createSupabaseClient(): SupabaseClient {
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     },
   });
-  
-  return supabaseInstance;
 }
 
 export async function initSupabase(): Promise<{ configured: boolean; error: string | null }> {
   if (!hasValidConfig()) {
     await loadConfigFromServer();
+  }
+  
+  if (!supabaseInstance && hasValidConfig()) {
+    supabaseInstance = createSupabaseClient();
   }
   
   const configured = hasValidConfig();
@@ -81,14 +81,24 @@ export function getSupabaseError(): string | null {
   return hasValidConfig() ? null : configError;
 }
 
-export const supabaseConfigured = hasValidConfig();
-export const supabaseError = !hasValidConfig()
-  ? 'Configuración de Supabase incompleta. Verifica las variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.'
-  : null;
+export function getSupabaseInstance(): SupabaseClient {
+  if (supabaseInstance) return supabaseInstance;
+  supabaseInstance = createSupabaseClient();
+  return supabaseInstance;
+}
 
-export const supabase: SupabaseClient = createSupabaseClient();
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_, prop) {
+    const instance = getSupabaseInstance();
+    const value = (instance as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(instance);
+    }
+    return value;
+  }
+});
 
 export async function getSupabase(): Promise<SupabaseClient> {
   await initSupabase();
-  return supabaseInstance || createSupabaseClient();
+  return getSupabaseInstance();
 }
