@@ -64,16 +64,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/config', (req, res) => {
-  if (!supabaseUrl || !supabaseKey) {
-    return res.status(500).json({ error: 'Supabase configuration missing' });
-  }
-  res.json({
-    supabaseUrl,
-    supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY
-  });
-});
-
 app.get('/api/tables', authenticateToken, (req, res) => {
   res.json({ tables: ALLOWED_TABLES });
 });

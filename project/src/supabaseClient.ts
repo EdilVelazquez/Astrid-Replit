@@ -1,104 +1,26 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-let supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+export const supabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http'));
+
+export const supabaseError = !supabaseConfigured
+  ? 'Configuración de Supabase incompleta. Verifica las variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.'
+  : null;
 
 const PLACEHOLDER_URL = 'https://placeholder.supabase.co';
 const PLACEHOLDER_KEY = 'placeholder-key';
 
-let supabaseInstance: SupabaseClient | null = null;
-let configLoaded = false;
-let configError: string | null = null;
-
-function hasValidConfig(): boolean {
-  return Boolean(supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http') && supabaseUrl !== PLACEHOLDER_URL);
-}
-
-async function loadConfigFromServer(): Promise<void> {
-  if (configLoaded) return;
-  
-  try {
-    const response = await fetch('/api/config');
-    if (response.ok) {
-      const config = await response.json();
-      if (config.supabaseUrl && config.supabaseAnonKey) {
-        supabaseUrl = config.supabaseUrl;
-        supabaseAnonKey = config.supabaseAnonKey;
-        supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true,
-            storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-          },
-        });
-        configError = null;
-      }
-    }
-  } catch (e) {
-    console.warn('Could not load config from server:', e);
-  }
-  
-  configLoaded = true;
-}
-
-function createSupabaseClient(): SupabaseClient {
-  const url = hasValidConfig() ? supabaseUrl : PLACEHOLDER_URL;
-  const key = hasValidConfig() ? supabaseAnonKey : PLACEHOLDER_KEY;
-  
-  return createClient(url, key, {
+export const supabase: SupabaseClient = createClient(
+  supabaseConfigured ? supabaseUrl : PLACEHOLDER_URL,
+  supabaseConfigured ? supabaseAnonKey : PLACEHOLDER_KEY,
+  {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     },
-  });
-}
-
-export async function initSupabase(): Promise<{ configured: boolean; error: string | null }> {
-  if (!hasValidConfig()) {
-    await loadConfigFromServer();
   }
-  
-  if (!supabaseInstance && hasValidConfig()) {
-    supabaseInstance = createSupabaseClient();
-  }
-  
-  const configured = hasValidConfig();
-  if (!configured) {
-    configError = 'Configuración de Supabase incompleta. Verifica las variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.';
-  }
-  
-  return { configured, error: configError };
-}
-
-export function getSupabaseConfigured(): boolean {
-  return hasValidConfig();
-}
-
-export function getSupabaseError(): string | null {
-  return hasValidConfig() ? null : configError;
-}
-
-export function getSupabaseInstance(): SupabaseClient {
-  if (supabaseInstance) return supabaseInstance;
-  supabaseInstance = createSupabaseClient();
-  return supabaseInstance;
-}
-
-export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
-  get(_, prop) {
-    const instance = getSupabaseInstance();
-    const value = (instance as any)[prop];
-    if (typeof value === 'function') {
-      return value.bind(instance);
-    }
-    return value;
-  }
-});
-
-export async function getSupabase(): Promise<SupabaseClient> {
-  await initSupabase();
-  return getSupabaseInstance();
-}
+);
