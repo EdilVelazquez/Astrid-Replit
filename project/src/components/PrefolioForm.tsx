@@ -27,7 +27,7 @@ interface VehicleModel {
   name: string;
 }
 
-export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormProps) {
+export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: PrefolioFormProps) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -691,31 +691,8 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Inicio de Servicio</h2>
-          <p className="text-sm text-gray-600">
-            Completa la información del vehículo y equipo para iniciar las pruebas
-          </p>
-        </div>
-        {onClose && (
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm('¿Cerrar este servicio? El formulario se reiniciará completamente y deberás iniciar desde cero.')) {
-                onClose();
-              }
-            }}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Cerrar servicio"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        )}
-      </div>
-
-      <section className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div className="space-y-6">
+      <section className="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Building className="w-5 h-5 text-blue-600" />
           Detalles del servicio
