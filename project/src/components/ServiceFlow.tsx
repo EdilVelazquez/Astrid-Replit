@@ -1,5 +1,5 @@
 import { ExpedienteServicio } from '../types';
-import { CheckCircle2, ChevronRight, RefreshCcw, Car, Cpu, ClipboardCheck, FileCheck, AlertCircle } from 'lucide-react';
+import { CheckCircle2, ChevronRight, RefreshCcw, Car, Cpu, ClipboardCheck, FileCheck, AlertCircle, MapPin, Building2, User } from 'lucide-react';
 import { PrefolioForm } from './PrefolioForm';
 import { PruebasPasivas } from './PruebasPasivas';
 import { PruebasActivas } from './PruebasActivas';
@@ -110,9 +110,10 @@ export function ServiceFlow({
   const requiereBloqueo = requierePrueba(expediente.installation_details || '', 'bloqueo');
   const requiereBuzzer = requierePrueba(expediente.installation_details || '', 'buzzer');
   const requiereBoton = requierePrueba(expediente.installation_details || '', 'boton');
+  const requiereIgnicion = requierePrueba(expediente.installation_details || '', 'ignicion');
 
   const pruebasPasivasCompletas = 
-    ignicionExitosa && 
+    (requiereIgnicion ? ignicionExitosa : true) && 
     (requiereBoton ? botonExitoso : true) && 
     ubicacionExitosa;
 
@@ -124,7 +125,7 @@ export function ServiceFlow({
 
   const obtenerPruebasPendientes = (): string[] => {
     const pendientes: string[] = [];
-    if (!ignicionExitosa) pendientes.push('Ignición');
+    if (requiereIgnicion && !ignicionExitosa) pendientes.push('Ignición');
     if (requiereBoton && !botonExitoso) pendientes.push('Botón de pánico');
     if (!ubicacionExitosa) pendientes.push('Ubicación');
     if (requiereBloqueo && !bloqueoExitoso) pendientes.push('Bloqueo');
@@ -144,18 +145,48 @@ export function ServiceFlow({
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              {expediente.work_order_name} - {expediente.appointment_name}
-            </h2>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {expediente.asset_marca} {expediente.asset_submarca} · {expediente.asset_placas}
-            </p>
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {expediente.appointment_name || 'Sin cita'}
+              </h2>
+              {expediente.work_order_name && (
+                <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                  WO: {expediente.work_order_name}
+                </span>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div className="flex items-center gap-1.5 text-gray-600">
+                <Car className="w-3.5 h-3.5 text-gray-400" />
+                <span className="truncate">{expediente.asset_marca} {expediente.asset_submarca}</span>
+                {expediente.asset_placas && <span className="text-xs font-mono text-gray-400">({expediente.asset_placas})</span>}
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600">
+                <User className="w-3.5 h-3.5 text-gray-400" />
+                <span className="truncate">{expediente.client_name || 'Sin cliente'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600">
+                <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                <span className="truncate">{expediente.company_name || 'Sin empresa'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600">
+                <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                <span className="truncate">{expediente.service_city || 'Sin ubicación'}</span>
+              </div>
+            </div>
+
+            {expediente.installation_details && (
+              <div className="mt-2 text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-md">
+                <span className="font-medium text-gray-600">Instalación:</span> {expediente.installation_details}
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
-            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0 ml-4"
           >
             <RefreshCcw className="w-4 h-4" />
             Reiniciar

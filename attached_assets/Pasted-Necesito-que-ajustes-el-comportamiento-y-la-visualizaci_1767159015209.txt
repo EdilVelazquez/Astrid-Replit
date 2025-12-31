@@ -1,0 +1,104 @@
+Necesito que ajustes el comportamiento y la visualización del flujo de servicio considerando lo siguiente, sin agregar funcionalidades nuevas fuera de lo descrito:
+
+1. Prueba de ignición (validación incorrecta)
+
+Actualmente el sistema está solicitando prueba de ignición, pero este servicio NO la requiere.
+
+Revisa la lógica que determina qué pruebas se muestran.
+
+La prueba de ignición solo debe mostrarse si el servicio lo requiere explícitamente (según installation_details o configuración del servicio).
+
+Si el servicio no incluye ignición, no debe aparecer ni bloquear el flujo.
+
+2. Información mostrada en la tarjeta del servicio
+
+La tarjeta del servicio debe mostrar más información útil, no solo lo básico.
+
+Debe incluir:
+
+Información completa del servicio (proveniente de installation_details)
+
+Datos del vehículo relevantes
+
+Tipo de servicio
+
+Cliente / empresa
+
+Ubicación
+
+Estado actual
+
+Cualquier otro dato que ayude al técnico a entender el contexto sin entrar al servicio
+
+⚠️ No usar textos genéricos como “Inicio de servicio”.
+La tarjeta debe ser informativa, no narrativa.
+
+3. Información visible al iniciar el servicio
+
+Cuando se abre un servicio:
+
+Debe mostrarse la misma información que en la tarjeta (datos del servicio + instalación).
+
+No deben desaparecer datos relevantes.
+
+El técnico debe sentir continuidad, no que “entra a otra cosa”.
+
+4. Mensajes del sistema (modales)
+
+Todos los mensajes del sistema deben mostrarse como modales, no embebidos en el flujo:
+
+Ejemplos:
+
+Confirmación al iniciar servicio
+
+Confirmación al cambiar de dispositivo
+
+Confirmación al finalizar pruebas
+
+Advertencias o bloqueos
+
+Estos modales deben:
+
+Usar el mismo diseño visual (paleta, tipografía, jerarquía)
+
+Tener botones claros (confirmar / cancelar)
+
+No romper el flujo visual
+
+5. Botón para avanzar tras completar pruebas
+
+Cuando todas las pruebas estén completadas correctamente, debe aparecer un botón claro para continuar:
+
+Texto sugerido: “Continuar a documentación final”
+
+Solo visible cuando todas las pruebas estén completas
+
+Al presionar:
+
+Bloquea edición de pruebas
+
+Avanza al siguiente paso del flujo
+
+6. Estilo visual y coherencia
+
+Unificar colores, botones y estados (activo / deshabilitado / éxito / advertencia).
+
+El diseño debe alinearse visualmente con la identidad de Numaris (referencia visual del sitio).
+
+Evitar colores aleatorios o sin jerarquía.
+
+Mantener una experiencia limpia, profesional y consistente.
+
+7. Resumen clave
+
+No mostrar pruebas que no correspondan al servicio.
+
+Mostrar más información útil en tarjetas.
+
+Mantener continuidad visual entre lista → detalle → flujo.
+
+Usar modales para confirmaciones.
+
+Habilitar botón de avance solo cuando todo esté completo.
+
+Unificar diseño y jerarquía visual.

@@ -15,6 +15,7 @@ import { buscarEquipoEnInventario } from './services/zohoInventoryService';
 import { useAuth } from './contexts/AuthContext';
 import { X } from 'lucide-react';
 import { Header } from './components/Header';
+import { ConfirmModal } from './components/ui/Modal';
 import { ValidationSummaryJSON, ExpedienteServicio } from './types';
 import { supabase, supabaseConfigured, supabaseError } from './supabaseClient';
 import { MisServicios } from './components/misServicios/MisServicios';
@@ -53,6 +54,9 @@ function TechnicianApp() {
   const [mostrarFormularioCierre, setMostrarFormularioCierre] = useState(false);
   const [pruebasBloqueadas, setPruebasBloqueadas] = useState(false);
   const [mostrarMisServicios, setMostrarMisServicios] = useState(false);
+  const [mostrarModalReiniciarServicio, setMostrarModalReiniciarServicio] = useState(false);
+  const [pendingEsnDuplicado, setPendingEsnDuplicado] = useState<{ esn: string; woInfo: string; callback: () => void } | null>(null);
+  const [pendingCambioDispositivo, setPendingCambioDispositivo] = useState<{ nuevoESN: string; motivo: string; descripcion: string; woInfo: string } | null>(null);
 
 
   const handleQRScanSuccess = (decodedText: string) => {
@@ -90,16 +94,19 @@ function TechnicianApp() {
           console.error('Error al buscar ESN:', errorBusqueda);
         } else if (expedientesConESN && expedientesConESN.length > 0) {
           const expedientePrevio = expedientesConESN[0];
-          const mensaje = `⚠️ ALERTA: El ESN "${esn}" ya fue utilizado en:\n\nWO: ${expedientePrevio.work_order_name}\nAP: ${expedientePrevio.appointment_name}\n\n¿Estás seguro de que quieres usar este ESN en el servicio actual?`;
+          const woInfo = `WO: ${expedientePrevio.work_order_name}, AP: ${expedientePrevio.appointment_name}`;
 
-          agregarLogConsola(`⚠️ ESN ${esn} encontrado en WO: ${expedientePrevio.work_order_name}, AP: ${expedientePrevio.appointment_name}`);
-
-          const confirmacion = confirm(mensaje);
-          if (!confirmacion) {
-            agregarLogConsola(`❌ Uso de ESN cancelado por el usuario`);
-            return false;
-          }
-          agregarLogConsola(`✓ Usuario confirmó el uso del ESN duplicado`);
+          agregarLogConsola(`⚠️ ESN ${esn} encontrado en ${woInfo}`);
+          
+          setPendingEsnDuplicado({
+            esn,
+            woInfo,
+            callback: () => {
+              agregarLogConsola(`✓ Usuario confirmó el uso del ESN duplicado`);
+              iniciarPruebasConESN(esn, true);
+            }
+          });
+          return false;
         } else {
           agregarLogConsola(`✓ ESN no ha sido utilizado previamente`);
         }
@@ -216,6 +223,107 @@ function TechnicianApp() {
     setGuardandoESN(false);
   };
 
+  const continuarCambioDispositivoConfirmado = async (nuevoESN: string, motivo: string, descripcion: string) => {
+    if (!state.expediente_actual || !state.esn) {
+      agregarLogConsola('❌ Error: No hay expediente o ESN actual');
+      return;
+    }
+
+    setCambiandoDispositivo(true);
+    agregarLogConsola('✓ Usuario confirmó el uso del ESN duplicado');
+
+    try {
+      agregarLogConsola('🔍 Consultando CRM/Zoho Inventory para el nuevo dispositivo...');
+      const resultadoZoho = await buscarEquipoEnInventario(nuevoESN);
+
+      let zohoInventoryId: string | undefined;
+      let modeloDispositivo: string | undefined;
+      let imei: string | undefined;
+      let telefonoSim: string | undefined;
+
+      if (resultadoZoho.success && resultadoZoho.data) {
+        agregarLogConsola('✅ Equipo encontrado en CRM:');
+        agregarLogConsola(`   📦 ID: ${resultadoZoho.data.id}`);
+        agregarLogConsola(`   📱 Modelo: ${resultadoZoho.data.model}`);
+        agregarLogConsola(`   🔢 IMEI: ${resultadoZoho.data.IMEI}`);
+        agregarLogConsola(`   📞 Línea: ${resultadoZoho.data.linea}`);
+
+        zohoInventoryId = resultadoZoho.data.id;
+        modeloDispositivo = resultadoZoho.data.model;
+        imei = resultadoZoho.data.IMEI;
+        telefonoSim = resultadoZoho.data.linea;
+      } else {
+        agregarLogConsola(`⚠️ No se encontró el equipo en CRM: ${resultadoZoho.error || 'Sin información'}`);
+        agregarLogConsola('ℹ️ Se continuará sin datos de CRM');
+      }
+
+      const expedienteId = generarExpedienteId(
+        state.expediente_actual.work_order_name,
+        state.expediente_actual.appointment_name
+      );
+
+      agregarLogConsola('🗑️ Reseteando sesión de pruebas pasivas...');
+      const exitoReset = await reiniciarSesion(expedienteId, nuevoESN);
+
+      if (!exitoReset) {
+        throw new Error('Error al resetear sesión de pruebas');
+      }
+
+      agregarLogConsola('✅ Sesión de pruebas reseteada correctamente');
+      agregarLogConsola('💾 Actualizando expediente con nuevo dispositivo y datos de CRM...');
+
+      const exitoRegistro = await registrarCambioDispositivo(
+        state.expediente_actual.id,
+        state.esn,
+        nuevoESN,
+        motivo,
+        descripcion,
+        state.expediente_actual.device_esn_cambio_cantidad || 0,
+        zohoInventoryId,
+        modeloDispositivo,
+        imei,
+        telefonoSim
+      );
+
+      if (!exitoRegistro) {
+        throw new Error('Error al registrar cambio de dispositivo');
+      }
+
+      agregarLogConsola('✅ Expediente actualizado con datos del nuevo dispositivo');
+      agregarLogConsola('🔄 Reiniciando contexto del servicio...');
+
+      dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
+      setPruebasCompletadas(false);
+      setMostrarFormularioCierre(false);
+
+      const esNuevoEsnDePrueba = nuevoESN === '000000000000000';
+
+      setTimeout(() => {
+        dispatch({ type: 'SET_ESN', payload: nuevoESN });
+        agregarLogConsola('✅ Contexto del servicio reiniciado completamente');
+        agregarLogConsola('🚀 Listo para iniciar pruebas con el nuevo dispositivo');
+        
+        if (esNuevoEsnDePrueba) {
+          agregarLogConsola('🧪 ESN de prueba detectado - avance manual habilitado');
+          agregarLogConsola('📝 Use los botones de marcado manual para completar cada prueba');
+        } else {
+          agregarLogConsola('🟢 Iniciando consulta inmediata y polling automático (60s, máx 10 intentos)');
+        }
+        
+        agregarLogConsola('✅ Cambio de dispositivo completado exitosamente');
+      }, 100);
+
+      setEsnTemporal('');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      agregarLogConsola(`❌ Error al cambiar dispositivo: ${errorMessage}`);
+      setErrorPanel(`Error al cambiar dispositivo: ${errorMessage}`);
+      console.error('Error en continuarCambioDispositivoConfirmado:', error);
+    } finally {
+      setCambiandoDispositivo(false);
+    }
+  };
+
   const handleCambiarDispositivo = async (nuevoESN: string, motivo: string, descripcion: string) => {
     if (!state.expediente_actual || !state.esn) {
       agregarLogConsola('❌ Error: No hay expediente o ESN actual');
@@ -241,18 +349,14 @@ function TechnicianApp() {
         console.error('Error al buscar ESN:', errorBusqueda);
       } else if (expedientesConESN && expedientesConESN.length > 0) {
         const expedientePrevio = expedientesConESN[0];
-        const mensaje = `⚠️ ALERTA: El ESN "${nuevoESN}" ya fue utilizado en:\n\nWO: ${expedientePrevio.work_order_name}\nAP: ${expedientePrevio.appointment_name}\n\n¿Estás seguro de que quieres usar este ESN?`;
+        const woInfo = `WO: ${expedientePrevio.work_order_name}, AP: ${expedientePrevio.appointment_name}`;
 
-        agregarLogConsola(`⚠️ ESN ${nuevoESN} encontrado en WO: ${expedientePrevio.work_order_name}, AP: ${expedientePrevio.appointment_name}`);
+        agregarLogConsola(`⚠️ ESN ${nuevoESN} encontrado en ${woInfo}`);
 
-        const confirmacion = confirm(mensaje);
-        if (!confirmacion) {
-          agregarLogConsola(`❌ Cambio de dispositivo cancelado por el usuario`);
-          setCambiandoDispositivo(false);
-          setMostrarModalCambioDispositivo(false);
-          return;
-        }
-        agregarLogConsola(`✓ Usuario confirmó el uso del ESN duplicado`);
+        setPendingCambioDispositivo({ nuevoESN, motivo, descripcion, woInfo });
+        setCambiandoDispositivo(false);
+        setMostrarModalCambioDispositivo(false);
+        return;
       } else {
         agregarLogConsola(`✓ ESN disponible`);
       }
@@ -887,12 +991,7 @@ function TechnicianApp() {
                   ubicacionFechaPreguntada={state.ubicacion_fecha_preguntada}
                   esperandoComandoActivo={state.esperando_respuesta_comando_activo}
                   onPrefolioCompleted={handlePrefolioCompleted}
-                  onClose={async () => {
-                    if (!confirm('¿Reiniciar el servicio completo? Esta acción eliminará toda la información y las pruebas realizadas. No se puede deshacer.')) {
-                      return;
-                    }
-                    await handleCerrarServicio();
-                  }}
+                  onClose={() => setMostrarModalReiniciarServicio(true)}
                   onCambiarDispositivo={() => setMostrarModalCambioDispositivo(true)}
                   onSetIgnicionExitosa={(val) => dispatch({ type: 'SET_IGNICION_EXITOSA', payload: val })}
                   onSetBotonExitoso={(val) => dispatch({ type: 'SET_BOTON_EXITOSO', payload: val })}
@@ -1032,6 +1131,54 @@ function TechnicianApp() {
           appointmentName={state.expediente_actual.appointment_name || ''}
           onConfirm={handleCambiarDispositivo}
           onClose={() => setMostrarModalCambioDispositivo(false)}
+        />
+      )}
+
+      <ConfirmModal
+        isOpen={mostrarModalReiniciarServicio}
+        onClose={() => setMostrarModalReiniciarServicio(false)}
+        onConfirm={async () => {
+          setMostrarModalReiniciarServicio(false);
+          await handleCerrarServicio();
+        }}
+        title="Reiniciar servicio"
+        message="¿Reiniciar el servicio completo? Esta acción eliminará toda la información y las pruebas realizadas. No se puede deshacer."
+        confirmText="Reiniciar"
+        cancelText="Cancelar"
+        variant="warning"
+      />
+
+      {pendingEsnDuplicado && (
+        <ConfirmModal
+          isOpen={!!pendingEsnDuplicado}
+          onClose={() => setPendingEsnDuplicado(null)}
+          onConfirm={() => {
+            const callback = pendingEsnDuplicado.callback;
+            setPendingEsnDuplicado(null);
+            callback();
+          }}
+          title="ESN ya utilizado"
+          message={`El ESN "${pendingEsnDuplicado.esn}" ya fue utilizado en: ${pendingEsnDuplicado.woInfo}. ¿Estás seguro de que quieres usar este ESN en el servicio actual?`}
+          confirmText="Usar ESN"
+          cancelText="Cancelar"
+          variant="warning"
+        />
+      )}
+
+      {pendingCambioDispositivo && (
+        <ConfirmModal
+          isOpen={!!pendingCambioDispositivo}
+          onClose={() => setPendingCambioDispositivo(null)}
+          onConfirm={async () => {
+            const { nuevoESN, motivo, descripcion } = pendingCambioDispositivo;
+            setPendingCambioDispositivo(null);
+            await continuarCambioDispositivoConfirmado(nuevoESN, motivo, descripcion);
+          }}
+          title="ESN ya utilizado"
+          message={`El ESN "${pendingCambioDispositivo.nuevoESN}" ya fue utilizado en: ${pendingCambioDispositivo.woInfo}. ¿Estás seguro de que quieres usar este ESN para el cambio de dispositivo?`}
+          confirmText="Usar ESN"
+          cancelText="Cancelar"
+          variant="warning"
         />
       )}
     </div>

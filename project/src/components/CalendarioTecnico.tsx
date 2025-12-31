@@ -690,6 +690,15 @@ function TarjetaServicio({
             </div>
           </div>
 
+          {servicio.installation_details && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs text-gray-400 mb-1">Detalles de instalación</p>
+              <p className="text-sm text-gray-600 line-clamp-2">
+                {servicio.installation_details}
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3 pt-3 border-t border-gray-100">
             <div className="flex items-start gap-2">
               <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
