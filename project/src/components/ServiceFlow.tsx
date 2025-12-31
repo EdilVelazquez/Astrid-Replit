@@ -1,0 +1,296 @@
+import { useEffect } from 'react';
+import { ExpedienteServicio } from '../types';
+import { CheckCircle2, ChevronRight, RefreshCcw, Car, Cpu, ClipboardCheck, FileCheck } from 'lucide-react';
+import { PrefolioForm } from './PrefolioForm';
+import { PruebasPasivas } from './PruebasPasivas';
+import { PruebasActivas } from './PruebasActivas';
+import { FormularioCierre } from './FormularioCierre';
+import { generarExpedienteId } from '../services/testSessionService';
+import { traducirPruebasDesdeInstallationDetails, requierePrueba } from '../utils';
+
+interface ServiceFlowProps {
+  expediente: ExpedienteServicio;
+  esn: string | null;
+  prefolioCompletado: boolean;
+  pruebasCompletadas: boolean;
+  mostrarFormularioCierre: boolean;
+  ignicionExitosa: boolean;
+  botonExitoso: boolean;
+  ubicacionExitosa: boolean;
+  bloqueoExitoso: boolean;
+  desbloqueoExitoso: boolean;
+  buzzerExitoso: boolean;
+  buzzerOffExitoso: boolean;
+  botonFechaPreguntada: string | null | undefined;
+  ubicacionFechaPreguntada: string | null | undefined;
+  esperandoComandoActivo: boolean;
+  onPrefolioCompleted: () => void;
+  onClose: () => void;
+  onCambiarDispositivo: () => void;
+  onSetIgnicionExitosa: (value: boolean) => void;
+  onSetBotonExitoso: (value: boolean) => void;
+  onSetUbicacionExitosa: (value: boolean) => void;
+  onSetBloqueoExitoso: (value: boolean) => void;
+  onSetDesbloqueoExitoso: (value: boolean) => void;
+  onSetBuzzerExitoso: (value: boolean) => void;
+  onSetBuzzerOffExitoso: (value: boolean) => void;
+  onSetBotonFechaPreguntada: (value: string | null) => void;
+  onSetUbicacionFechaPreguntada: (value: string | null) => void;
+  onErrorPanel: (msg: string) => void;
+  onLogConsola: (msg: string) => void;
+  onPruebasCompletadas: () => void;
+  onFormularioCierreCompletado: () => void;
+  onCancelarCierre: () => void;
+}
+
+type Step = 'prefolio' | 'pruebas' | 'cierre';
+
+const steps: { id: Step; label: string; icon: typeof Car }[] = [
+  { id: 'prefolio', label: 'Datos del Vehículo', icon: Car },
+  { id: 'pruebas', label: 'Pruebas del Dispositivo', icon: Cpu },
+  { id: 'cierre', label: 'Documentación Final', icon: FileCheck },
+];
+
+export function ServiceFlow({
+  expediente,
+  esn,
+  prefolioCompletado,
+  pruebasCompletadas,
+  mostrarFormularioCierre,
+  ignicionExitosa,
+  botonExitoso,
+  ubicacionExitosa,
+  bloqueoExitoso,
+  desbloqueoExitoso,
+  buzzerExitoso,
+  buzzerOffExitoso,
+  botonFechaPreguntada,
+  ubicacionFechaPreguntada,
+  esperandoComandoActivo,
+  onPrefolioCompleted,
+  onClose,
+  onCambiarDispositivo,
+  onSetIgnicionExitosa,
+  onSetBotonExitoso,
+  onSetUbicacionExitosa,
+  onSetBloqueoExitoso,
+  onSetDesbloqueoExitoso,
+  onSetBuzzerExitoso,
+  onSetBuzzerOffExitoso,
+  onSetBotonFechaPreguntada,
+  onSetUbicacionFechaPreguntada,
+  onErrorPanel,
+  onLogConsola,
+  onPruebasCompletadas,
+  onFormularioCierreCompletado,
+  onCancelarCierre,
+}: ServiceFlowProps) {
+  const getCurrentStep = (): Step => {
+    if (!prefolioCompletado) return 'prefolio';
+    if (mostrarFormularioCierre) return 'cierre';
+    return 'pruebas';
+  };
+
+  const currentStep = getCurrentStep();
+
+  const getStepStatus = (stepId: Step): 'completed' | 'current' | 'pending' => {
+    const stepOrder = ['prefolio', 'pruebas', 'cierre'];
+    const currentIndex = stepOrder.indexOf(currentStep);
+    const stepIndex = stepOrder.indexOf(stepId);
+
+    if (stepId === 'prefolio' && prefolioCompletado) return 'completed';
+    if (stepId === 'pruebas' && mostrarFormularioCierre) return 'completed';
+    if (stepIndex < currentIndex) return 'completed';
+    if (stepIndex === currentIndex) return 'current';
+    return 'pending';
+  };
+
+  const pruebasRequeridas = traducirPruebasDesdeInstallationDetails(expediente.installation_details || '');
+  const requiereBloqueo = requierePrueba(expediente.installation_details || '', 'bloqueo');
+  const requiereBuzzer = requierePrueba(expediente.installation_details || '', 'buzzer');
+  const requiereBoton = requierePrueba(expediente.installation_details || '', 'boton');
+
+  const pruebasPasivasCompletas = 
+    ignicionExitosa && 
+    (requiereBoton ? botonExitoso : true) && 
+    ubicacionExitosa;
+
+  const pruebasActivasCompletas = 
+    (requiereBloqueo ? (bloqueoExitoso && desbloqueoExitoso) : true) &&
+    (requiereBuzzer ? (buzzerExitoso && buzzerOffExitoso) : true);
+
+  const todasLasPruebasCompletas = pruebasPasivasCompletas && pruebasActivasCompletas;
+
+  useEffect(() => {
+    if (todasLasPruebasCompletas && !pruebasCompletadas && esn) {
+      onPruebasCompletadas();
+    }
+  }, [todasLasPruebasCompletas, pruebasCompletadas, esn]);
+
+  const expedienteId = generarExpedienteId(
+    expediente.work_order_name || null,
+    expediente.appointment_name || null
+  );
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {expediente.work_order_name} - {expediente.appointment_name}
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {expediente.asset_marca} {expediente.asset_submarca} · {expediente.asset_placas}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <RefreshCcw className="w-4 h-4" />
+            Reiniciar
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {steps.map((step, index) => {
+            const status = getStepStatus(step.id);
+            const Icon = step.icon;
+            
+            return (
+              <div key={step.id} className="flex items-center">
+                <div className="flex items-center gap-2">
+                  <div className={`
+                    flex items-center justify-center w-8 h-8 rounded-full transition-all
+                    ${status === 'completed' ? 'bg-gray-900 text-white' : ''}
+                    ${status === 'current' ? 'bg-gray-900 text-white ring-2 ring-gray-300 ring-offset-2' : ''}
+                    ${status === 'pending' ? 'bg-gray-200 text-gray-400' : ''}
+                  `}>
+                    {status === 'completed' ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <Icon className="w-4 h-4" />
+                    )}
+                  </div>
+                  <span className={`
+                    text-sm font-medium hidden sm:block
+                    ${status === 'current' ? 'text-gray-900' : ''}
+                    ${status === 'completed' ? 'text-gray-600' : ''}
+                    ${status === 'pending' ? 'text-gray-400' : ''}
+                  `}>
+                    {step.label}
+                  </span>
+                </div>
+                {index < steps.length - 1 && (
+                  <ChevronRight className="w-4 h-4 text-gray-300 mx-2" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="p-6">
+        {currentStep === 'prefolio' && (
+          <PrefolioForm
+            expediente={expediente}
+            onCompleted={onPrefolioCompleted}
+            onClose={onClose}
+          />
+        )}
+
+        {currentStep === 'pruebas' && esn && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Dispositivo</p>
+                <p className="text-sm text-gray-500 mt-0.5">ESN: {esn}</p>
+              </div>
+              <button
+                onClick={onCambiarDispositivo}
+                disabled={esperandoComandoActivo}
+                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cambiar dispositivo
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium text-gray-900 mb-3">Pruebas Pasivas</h3>
+              <PruebasPasivas
+                esn={esn}
+                expedienteId={expedienteId}
+                ignicionExitosa={ignicionExitosa}
+                botonExitoso={botonExitoso}
+                ubicacionExitosa={ubicacionExitosa}
+                botonFechaPreguntada={botonFechaPreguntada ?? null}
+                ubicacionFechaPreguntada={ubicacionFechaPreguntada ?? null}
+                pruebasRequeridas={pruebasRequeridas}
+                esperandoComandoActivo={esperandoComandoActivo}
+                onSetIgnicionExitosa={onSetIgnicionExitosa}
+                onSetBotonExitoso={onSetBotonExitoso}
+                onSetUbicacionExitosa={onSetUbicacionExitosa}
+                onSetBotonFechaPreguntada={onSetBotonFechaPreguntada}
+                onSetUbicacionFechaPreguntada={onSetUbicacionFechaPreguntada}
+                onErrorPanel={onErrorPanel}
+                onLogConsola={onLogConsola}
+              />
+            </div>
+
+            {(requiereBloqueo || requiereBuzzer) && (
+              <div className="space-y-1 pt-4 border-t border-gray-100">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Pruebas Activas</h3>
+                <PruebasActivas
+                  esn={esn}
+                  expedienteId={expedienteId}
+                  pruebasRequeridas={pruebasRequeridas}
+                  bloqueoExitoso={bloqueoExitoso}
+                  desbloqueoExitoso={desbloqueoExitoso}
+                  buzzerExitoso={buzzerExitoso}
+                  buzzerOffExitoso={buzzerOffExitoso}
+                  onSetBloqueoExitoso={onSetBloqueoExitoso}
+                  onSetDesbloqueoExitoso={onSetDesbloqueoExitoso}
+                  onSetBuzzerExitoso={onSetBuzzerExitoso}
+                  onSetBuzzerOffExitoso={onSetBuzzerOffExitoso}
+                  onErrorPanel={onErrorPanel}
+                  onLogConsola={onLogConsola}
+                />
+              </div>
+            )}
+
+            {todasLasPruebasCompletas && !mostrarFormularioCierre && (
+              <div className="pt-6 border-t border-gray-100">
+                <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center">
+                      <ClipboardCheck className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Pruebas completadas</p>
+                      <p className="text-xs text-gray-500">Continúa con la documentación final</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={onPruebasCompletadas}
+                    className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    Continuar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {currentStep === 'cierre' && (
+          <FormularioCierre
+            expediente={expediente}
+            onCompleted={onFormularioCierreCompletado}
+            onCancel={onCancelarCierre}
+          />
+        )}
+      </div>
+    </div>
+  );
+}

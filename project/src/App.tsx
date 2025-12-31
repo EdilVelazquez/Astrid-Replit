@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from './store';
-import { PruebasActivas } from './components/PruebasActivas';
-import { PruebasPasivas } from './components/PruebasPasivas';
 import { QRScanner } from './components/QRScanner';
 import { CompletionMessage } from './components/CompletionMessage';
 import { DeviceChangeModal } from './components/DeviceChangeModal';
-import { PrefolioForm } from './components/PrefolioForm';
-import { FormularioCierre } from './components/FormularioCierre';
 import { AppRouter } from './components/AppRouter';
 import CalendarioTecnico from './components/CalendarioTecnico';
+import { ServiceFlow } from './components/ServiceFlow';
 import { traducirPruebasDesdeInstallationDetails, requierePrueba } from './utils';
 import { actualizarExpediente, finalizarValidacionConExito, obtenerExpedienteCompleto, registrarCambioDispositivo, obtenerTodosLosServiciosPorEmailTecnico } from './services/expedienteService';
 import { generarExpedienteId, obtenerSesionPorExpediente, reiniciarSesion, crearSesion } from './services/testSessionService';
@@ -16,7 +13,7 @@ import { enviarDatosFinalesWebhook } from './services/webhookService';
 import { reiniciarServicioDePruebas, esServicioDePruebas } from './services/testServiceService';
 import { buscarEquipoEnInventario } from './services/zohoInventoryService';
 import { useAuth } from './contexts/AuthContext';
-import { X, CheckCircle2, RefreshCcw } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Header } from './components/Header';
 import { ValidationSummaryJSON, ExpedienteServicio } from './types';
 import { supabase, supabaseConfigured, supabaseError } from './supabaseClient';
@@ -865,196 +862,54 @@ function TechnicianApp() {
           <div className="space-y-6">
           {state.expediente_actual && (
             <>
-              {!prefolioCompletado && !servicioFinalizado && (
-                <PrefolioForm
-                  expediente={state.expediente_actual}
-                  onCompleted={handlePrefolioCompleted}
-                  onClose={handleCerrarServicio}
-                />
-              )}
-
-              {prefolioCompletado && !servicioFinalizado && state.expediente_actual.validation_final_status !== 'COMPLETADO' && (
-                <div className="bg-white rounded-lg shadow-sm border-l-4 border-blue-500 p-4 mb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                        <p className="text-sm font-semibold text-gray-900">
-                          Información del servicio registrada
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-3">
-                        Los datos están guardados y el servicio continúa con las pruebas del dispositivo
-                      </p>
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-xs">
-                        <p><span className="font-medium text-gray-700">Vehículo:</span> {state.expediente_actual.asset_marca} {state.expediente_actual.asset_submarca}</p>
-                        <p><span className="font-medium text-gray-700">VIN:</span> {state.expediente_actual.asset_vin}</p>
-                        <p><span className="font-medium text-gray-700">Placas:</span> {state.expediente_actual.asset_placas}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        if (!confirm('¿Reiniciar el servicio completo? Esta acción eliminará toda la información y las pruebas realizadas. No se puede deshacer.')) {
-                          return;
-                        }
-
-                        await handleCerrarServicio();
-                      }}
-                      className="ml-4 px-3 py-2 bg-red-600 text-white text-sm rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center gap-2"
-                    >
-                      <RefreshCcw className="w-4 h-4" />
-                      Reiniciar
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {prefolioCompletado && servicioFinalizado && state.expediente_actual.device_esn && (
-                <div className="bg-green-50 rounded-lg shadow-sm border-2 border-green-300 p-6">
-                  <h3 className="text-base font-semibold text-gray-800 mb-3">ESN del dispositivo</h3>
-                  <div className="bg-white rounded-lg px-4 py-3 border border-green-200">
-                    <p className="text-sm text-gray-600 mb-1">ESN registrado:</p>
-                    <p className="font-mono text-lg font-semibold text-blue-700">{state.expediente_actual.device_esn}</p>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">✓ Servicio completado - No se puede modificar</p>
-                </div>
-              )}
-
-              {prefolioCompletado && !servicioFinalizado && state.esn && state.expediente_actual?.validation_final_status !== 'COMPLETADO' && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800">ESN del dispositivo</p>
-                      <p className="text-sm text-green-600 mt-1">✓ ESN guardado: {state.esn}</p>
-                    </div>
-                    <button
-                      onClick={() => setMostrarModalCambioDispositivo(true)}
-                      disabled={state.esperando_respuesta_comando_activo || cambiandoDispositivo}
-                      className="px-3 py-2 bg-orange-600 text-white text-sm rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-                      title="Cambiar el dispositivo actual por otro"
-                    >
-                      <RefreshCcw className="w-4 h-4" />
-                      Cambiar Dispositivo
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {servicioFinalizado && validationSummary && state.expediente_actual ? (
+              {servicioFinalizado && validationSummary ? (
                 <CompletionMessage
                   expediente={state.expediente_actual}
                   validationSummary={validationSummary}
                 />
-              ) : servicioFinalizado ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-yellow-800">
-                    🔍 DEBUG: Servicio finalizado pero falta información:
-                    <br />
-                    • servicioFinalizado: {servicioFinalizado ? '✓' : '✗'}
-                    <br />
-                    • validationSummary: {validationSummary ? '✓' : '✗'}
-                    <br />
-                    • expediente_actual: {state.expediente_actual ? '✓' : '✗'}
-                  </p>
-                </div>
-              ) : null}
-
-              {state.esn && !servicioFinalizado && !mostrarFormularioCierre && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                  <PruebasPasivas
-                    esn={state.esn}
-                    expedienteId={generarExpedienteId(
-                      state.expediente_actual?.work_order_name || null,
-                      state.expediente_actual?.appointment_name || null
-                    )}
-                    pruebasRequeridas={traducirPruebasDesdeInstallationDetails(
-                      state.expediente_actual?.installation_details || ''
-                    )}
-                    ignicionExitosa={state.ignicion_exitosa}
-                    botonExitoso={state.boton_exitoso}
-                    ubicacionExitosa={state.ubicacion_exitosa}
-                    botonFechaPreguntada={state.boton_fecha_preguntada}
-                    ubicacionFechaPreguntada={state.ubicacion_fecha_preguntada}
-                    esperandoComandoActivo={state.esperando_respuesta_comando_activo}
-                    onSetIgnicionExitosa={(val) =>
-                      dispatch({ type: 'SET_IGNICION_EXITOSA', payload: val })
-                    }
-                    onSetBotonExitoso={(val) =>
-                      dispatch({ type: 'SET_BOTON_EXITOSO', payload: val })
-                    }
-                    onSetUbicacionExitosa={(val) =>
-                      dispatch({ type: 'SET_UBICACION_EXITOSA', payload: val })
-                    }
-                    onSetBotonFechaPreguntada={(fecha) =>
-                      dispatch({ type: 'SET_BOTON_FECHA_PREGUNTADA', payload: fecha })
-                    }
-                    onSetUbicacionFechaPreguntada={(fecha) =>
-                      dispatch({ type: 'SET_UBICACION_FECHA_PREGUNTADA', payload: fecha })
-                    }
-                    onErrorPanel={setErrorPanel}
-                    onLogConsola={agregarLogConsola}
-                  />
-
-                  <PruebasActivas
-                    esn={state.esn}
-                    expedienteId={generarExpedienteId(
-                      state.expediente_actual?.work_order_name || null,
-                      state.expediente_actual?.appointment_name || null
-                    )}
-                    pruebasRequeridas={traducirPruebasDesdeInstallationDetails(
-                      state.expediente_actual?.installation_details || ''
-                    )}
-                    bloqueoExitoso={state.bloqueo_exitoso}
-                    desbloqueoExitoso={state.desbloqueo_exitoso}
-                    buzzerExitoso={state.buzzer_exitoso}
-                    buzzerOffExitoso={state.buzzer_off_exitoso}
-                    onSetBloqueoExitoso={(val) =>
-                      dispatch({ type: 'SET_BLOQUEO_EXITOSO', payload: val })
-                    }
-                    onSetDesbloqueoExitoso={(val) =>
-                      dispatch({ type: 'SET_DESBLOQUEO_EXITOSO', payload: val })
-                    }
-                    onSetBuzzerExitoso={(val) =>
-                      dispatch({ type: 'SET_BUZZER_EXITOSO', payload: val })
-                    }
-                    onSetBuzzerOffExitoso={(val) =>
-                      dispatch({ type: 'SET_BUZZER_OFF_EXITOSO', payload: val })
-                    }
-                    onErrorPanel={setErrorPanel}
-                    onLogConsola={agregarLogConsola}
-                  />
-
-                  {pruebasCompletadas && (
-                    <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-t border-green-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                          <CheckCircle2 className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-green-800">Pruebas Completadas</h3>
-                          <p className="text-green-700 text-sm">Todas las pruebas fueron ejecutadas exitosamente</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          agregarLogConsola('✅ Técnico confirmó pruebas - avanzando a formulario de cierre');
-                          setMostrarFormularioCierre(true);
-                        }}
-                        className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg shadow-md transition-all duration-200 flex items-center justify-center gap-3"
-                      >
-                        <CheckCircle2 className="w-6 h-6" />
-                        Confirmar Pruebas y Continuar
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {mostrarFormularioCierre && !servicioFinalizado && state.expediente_actual && (
-                <FormularioCierre
+              ) : (
+                <ServiceFlow
                   expediente={state.expediente_actual}
-                  onCompleted={handleFormularioCierreCompletado}
-                  onCancel={() => setMostrarFormularioCierre(false)}
+                  esn={state.esn}
+                  prefolioCompletado={prefolioCompletado}
+                  pruebasCompletadas={pruebasCompletadas}
+                  mostrarFormularioCierre={mostrarFormularioCierre}
+                  ignicionExitosa={state.ignicion_exitosa}
+                  botonExitoso={state.boton_exitoso}
+                  ubicacionExitosa={state.ubicacion_exitosa}
+                  bloqueoExitoso={state.bloqueo_exitoso}
+                  desbloqueoExitoso={state.desbloqueo_exitoso}
+                  buzzerExitoso={state.buzzer_exitoso}
+                  buzzerOffExitoso={state.buzzer_off_exitoso}
+                  botonFechaPreguntada={state.boton_fecha_preguntada}
+                  ubicacionFechaPreguntada={state.ubicacion_fecha_preguntada}
+                  esperandoComandoActivo={state.esperando_respuesta_comando_activo}
+                  onPrefolioCompleted={handlePrefolioCompleted}
+                  onClose={async () => {
+                    if (!confirm('¿Reiniciar el servicio completo? Esta acción eliminará toda la información y las pruebas realizadas. No se puede deshacer.')) {
+                      return;
+                    }
+                    await handleCerrarServicio();
+                  }}
+                  onCambiarDispositivo={() => setMostrarModalCambioDispositivo(true)}
+                  onSetIgnicionExitosa={(val) => dispatch({ type: 'SET_IGNICION_EXITOSA', payload: val })}
+                  onSetBotonExitoso={(val) => dispatch({ type: 'SET_BOTON_EXITOSO', payload: val })}
+                  onSetUbicacionExitosa={(val) => dispatch({ type: 'SET_UBICACION_EXITOSA', payload: val })}
+                  onSetBloqueoExitoso={(val) => dispatch({ type: 'SET_BLOQUEO_EXITOSO', payload: val })}
+                  onSetDesbloqueoExitoso={(val) => dispatch({ type: 'SET_DESBLOQUEO_EXITOSO', payload: val })}
+                  onSetBuzzerExitoso={(val) => dispatch({ type: 'SET_BUZZER_EXITOSO', payload: val })}
+                  onSetBuzzerOffExitoso={(val) => dispatch({ type: 'SET_BUZZER_OFF_EXITOSO', payload: val })}
+                  onSetBotonFechaPreguntada={(fecha) => dispatch({ type: 'SET_BOTON_FECHA_PREGUNTADA', payload: fecha })}
+                  onSetUbicacionFechaPreguntada={(fecha) => dispatch({ type: 'SET_UBICACION_FECHA_PREGUNTADA', payload: fecha })}
+                  onErrorPanel={setErrorPanel}
+                  onLogConsola={agregarLogConsola}
+                  onPruebasCompletadas={() => {
+                    agregarLogConsola('✅ Técnico confirmó pruebas - avanzando a formulario de cierre');
+                    setPruebasCompletadas(true);
+                    setMostrarFormularioCierre(true);
+                  }}
+                  onFormularioCierreCompletado={handleFormularioCierreCompletado}
+                  onCancelarCierre={() => setMostrarFormularioCierre(false)}
                 />
               )}
             </>
