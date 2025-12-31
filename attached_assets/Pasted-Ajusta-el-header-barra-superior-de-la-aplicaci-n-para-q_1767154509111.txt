@@ -1,0 +1,93 @@
+Ajusta el header / barra superior de la aplicación para que sea moderno, limpio y dinámico, eliminando navegación rígida y haciendo que los módulos se adapten automáticamente según el contexto del usuario.
+
+1. Identidad visual
+
+El nombre visible debe ser únicamente Astrid.
+
+Debe funcionar como identidad de producto, no como título descriptivo.
+
+Estilo minimalista, profesional, tecnológico.
+
+Evitar colores fuertes; usar tonos neutros y acentos sutiles.
+
+2. Navegación dinámica por módulos (no fija)
+
+El sistema debe detectar automáticamente qué módulos o vistas están activos para el usuario.
+
+Los módulos activos deben mostrarse como íconos con texto corto (ej. “Agenda”, “Servicio”, “Historial”).
+
+No deben mostrarse módulos que no estén disponibles en ese momento.
+
+La navegación debe comportarse como una barra de contexto, no como un menú tradicional.
+
+Ejemplo:
+
+Si el usuario está en agenda → muestra Agenda
+
+Si está trabajando un servicio → muestra Servicio
+
+Si tiene un histórico → muestra Historial
+
+Todo de forma fluida y contextual.
+
+3. Diseño de navegación
+
+Los módulos deben verse como:
+
+Íconos simples + etiqueta corta.
+
+Sin botones grandes.
+
+Sin cajas ni colores excesivos.
+
+El módulo activo debe resaltarse sutilmente (subrayado, leve cambio de color, o indicador fino).
+
+4. Perfil de usuario / Cerrar sesión
+
+El botón de cerrar sesión no debe estar visible como texto.
+
+Debe representarse como:
+
+Un ícono circular de perfil (avatar genérico o iniciales).
+
+Al hacer clic:
+
+Se abre un pequeño menú (dropdown) con:
+
+Nombre del usuario
+
+Correo (opcional)
+
+Botón Cerrar sesión
+
+Diseño moderno y discreto.
+
+5. Comportamiento general
+
+La barra superior debe sentirse:
+
+Limpia
+
+Ligera
+
+Profesional
+
+Enfocada en productividad
+
+Nada debe distraer del flujo principal de trabajo.
+
+Evitar encabezados grandes, banners o textos redundantes.
+
+6. Objetivo final
+
+Que el header funcione como una barra inteligente de contexto, donde:
+
+El usuario entiende dónde está.
+
+Puede cambiar de módulo si corresponde.
+
+Tiene acceso a su perfil y sesión.
+
+Todo con una experiencia moderna, clara y profesional.
+
+La interfaz debe sentirse como una herramienta interna de alto nivel, no como una app genérica.

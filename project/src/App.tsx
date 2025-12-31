@@ -16,7 +16,8 @@ import { enviarDatosFinalesWebhook } from './services/webhookService';
 import { reiniciarServicioDePruebas, esServicioDePruebas } from './services/testServiceService';
 import { buscarEquipoEnInventario } from './services/zohoInventoryService';
 import { useAuth } from './contexts/AuthContext';
-import { Clipboard, X, Activity, CheckCircle2, LogOut, RefreshCcw, Calendar, FileText } from 'lucide-react';
+import { X, CheckCircle2, RefreshCcw } from 'lucide-react';
+import { Header } from './components/Header';
 import { ValidationSummaryJSON, ExpedienteServicio } from './types';
 import { supabase, supabaseConfigured, supabaseError } from './supabaseClient';
 import { MisServicios } from './components/misServicios/MisServicios';
@@ -809,75 +810,43 @@ function TechnicianApp() {
     p.toLowerCase().includes('buzzer')
   );
 
+  const obtenerModuloActivo = (): 'agenda' | 'servicio' | 'historial' | null => {
+    if (mostrarMisServicios) return 'historial';
+    if (mostrarCalendario) return 'agenda';
+    if (state.expediente_actual) return 'servicio';
+    return 'agenda';
+  };
+
+  const handleNavegar = async (modulo: 'agenda' | 'servicio' | 'historial' | null) => {
+    if (modulo === 'agenda') {
+      if (user?.email) {
+        const servicios = await obtenerTodosLosServiciosPorEmailTecnico(user.email);
+        setTodosLosServicios(servicios);
+      }
+      setMostrarCalendario(true);
+      setMostrarMisServicios(false);
+    } else if (modulo === 'historial') {
+      setMostrarMisServicios(true);
+      setMostrarCalendario(false);
+    } else if (modulo === 'servicio' && state.expediente_actual) {
+      setMostrarCalendario(false);
+      setMostrarMisServicios(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <header className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <Clipboard className="w-8 h-8 text-blue-600" />
-              <h1 className="text-3xl font-bold text-gray-900">
-                Validación de Pruebas Técnicas
-              </h1>
-            </div>
-            <div className="flex items-center gap-3">
-              {!mostrarCalendario && !mostrarMisServicios && (
-                <button
-                  onClick={async () => {
-                    if (user?.email) {
-                      const servicios = await obtenerTodosLosServiciosPorEmailTecnico(user.email);
-                      setTodosLosServicios(servicios);
-                    }
-                    setMostrarCalendario(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                  title="Ver calendario"
-                >
-                  <Calendar className="w-5 h-5" />
-                  <span className="hidden sm:inline">Mi Agenda</span>
-                </button>
-              )}
-              {!mostrarMisServicios && (
-                <button
-                  onClick={() => {
-                    setMostrarMisServicios(true);
-                    setMostrarCalendario(false);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-                  title="Ver historial de servicios"
-                >
-                  <FileText className="w-5 h-5" />
-                  <span className="hidden sm:inline">Mis Servicios</span>
-                </button>
-              )}
-              {contadorRequests > 0 && (
-                <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
-                  <Activity className="w-5 h-5 text-blue-600" />
-                  <div className="text-sm">
-                    <span className="text-blue-600 font-semibold">{contadorRequests}</span>
-                    <span className="text-blue-700 ml-1">requests</span>
-                  </div>
-                </div>
-              )}
-              <button
-                onClick={signOut}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
-                title="Cerrar sesión"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="hidden sm:inline">Cerrar sesión</span>
-              </button>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-gray-600">Sistema de validación de instalación y configuración</p>
-            {user && (
-              <p className="text-sm text-gray-500">
-                {user.email} {user.role && `(${user.role})`}
-              </p>
-            )}
-          </div>
-        </header>
+    <div className="min-h-screen bg-gray-50">
+      <Header
+        user={user}
+        moduloActivo={obtenerModuloActivo()}
+        onNavegar={handleNavegar}
+        onCerrarSesion={signOut}
+        mostrarAgenda={true}
+        mostrarServicio={!!state.expediente_actual}
+        mostrarHistorial={true}
+      />
+
+      <div className="max-w-4xl mx-auto px-4 py-6">
 
         {mostrarMisServicios ? (
           <MisServicios

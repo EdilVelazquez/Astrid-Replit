@@ -90,6 +90,19 @@ project/
 
 ## Diseño de UI/UX (Actualizado)
 
+### Header / Barra Superior
+- **Identidad**: Nombre "Astrid" como marca del producto
+- **Estilo**: Minimalista, profesional, tonos neutros
+- **Navegación dinámica contextual**:
+  - Módulos visibles según el estado del usuario
+  - Iconos + etiquetas cortas (Agenda, Servicio, Historial)
+  - Módulo activo con resaltado sutil (fondo gris + icono azul)
+- **Perfil de usuario**:
+  - Avatar circular con iniciales del usuario
+  - Dropdown al hacer clic con nombre, email, rol
+  - Botón "Cerrar sesión" dentro del dropdown (no visible como texto)
+- **Componente**: `src/components/Header.tsx`
+
 ### Flujo de Pruebas
 - Pantalla unificada con flujo lineal de arriba hacia abajo
 - Orden: Resumen del servicio → ESN/Dispositivo → Pruebas Pasivas → Pruebas Activas → Botón "Confirmar y Continuar"
