@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ExpedienteServicio } from '../types';
 import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2, Car, Wrench, User } from 'lucide-react';
+import { ConfirmModal } from './ui/Modal';
 
 function formatearFechaLocal(fecha: Date): string {
   const year = fecha.getFullYear();
@@ -37,6 +38,7 @@ export default function CalendarioTecnico({
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('todos');
   const [modoVisualizacion, setModoVisualizacion] = useState<ModoVisualizacion>('tarjeta');
+  const [servicioConfirmacion, setServicioConfirmacion] = useState<ExpedienteServicio | null>(null);
 
   const esHoy = (fecha: Date): boolean => {
     const hoy = new Date();
@@ -285,17 +287,12 @@ export default function CalendarioTecnico({
 
               const handleIniciar = () => {
                 if (!puedeIniciar) return;
-                const confirmacion = confirm(
-                  `¿Iniciar servicio?\n\nCita: ${servicio.appointment_name || 'Sin número'}\nCliente: ${servicio.client_name || 'No especificado'}`
-                );
-                if (confirmacion) {
-                  onSeleccionarServicio(servicio);
-                }
+                setServicioConfirmacion(servicio);
               };
 
               const getEstadoIndicator = () => {
                 if (estado.estado === 'completado') return 'bg-gray-400';
-                if (estado.estado === 'en_curso') return 'bg-gray-900';
+                if (estado.estado === 'en_curso') return 'bg-[#0F1C3F]';
                 if (estado.estado === 'pendiente') return 'bg-gray-300';
                 return 'bg-gray-200';
               };
@@ -325,14 +322,14 @@ export default function CalendarioTecnico({
                     {esEnCurso ? (
                       <button
                         onClick={() => onSeleccionarServicio(servicio)}
-                        className="px-3 py-1 bg-gray-900 text-white text-xs font-medium rounded-md hover:bg-gray-800 transition-colors"
+                        className="px-3 py-1 bg-[#0F1C3F] text-white text-xs font-medium rounded-md hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
                       >
                         Reanudar
                       </button>
                     ) : puedeIniciar && estado.estado === 'pendiente' ? (
                       <button
                         onClick={handleIniciar}
-                        className="px-3 py-1 bg-gray-900 text-white text-xs font-medium rounded-md hover:bg-gray-800 transition-colors"
+                        className="px-3 py-1 bg-[#0F1C3F] text-white text-xs font-medium rounded-md hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
                       >
                         Iniciar
                       </button>
@@ -365,6 +362,7 @@ export default function CalendarioTecnico({
             estado={obtenerEstadoServicio(servicio)}
             puedeIniciar={puedeIniciarServicio(servicio)}
             onSeleccionar={onSeleccionarServicio}
+            onIniciarServicio={setServicioConfirmacion}
             formatearHora={formatearHora}
           />
         ))}
@@ -530,6 +528,22 @@ export default function CalendarioTecnico({
       <div className="mt-4">
         {renderVistaCalendario()}
       </div>
+
+      <ConfirmModal
+        isOpen={!!servicioConfirmacion}
+        onClose={() => setServicioConfirmacion(null)}
+        onConfirm={() => {
+          if (servicioConfirmacion) {
+            onSeleccionarServicio(servicioConfirmacion);
+            setServicioConfirmacion(null);
+          }
+        }}
+        title="Iniciar servicio"
+        message={servicioConfirmacion ? `¿Estás seguro de que deseas iniciar el servicio?\n\nCita: ${servicioConfirmacion.appointment_name || 'Sin número'}\nCliente: ${servicioConfirmacion.client_name || 'No especificado'}` : ''}
+        confirmText="Iniciar"
+        cancelText="Cancelar"
+        variant="confirm"
+      />
     </div>
   );
 }
@@ -539,34 +553,26 @@ function TarjetaServicio({
   estado,
   puedeIniciar,
   onSeleccionar,
+  onIniciarServicio,
   formatearHora
 }: {
   servicio: ExpedienteServicio;
   estado: EstadoServicio;
   puedeIniciar: boolean;
   onSeleccionar: (servicio: ExpedienteServicio) => void;
+  onIniciarServicio: (servicio: ExpedienteServicio) => void;
   formatearHora: (fecha: string) => string;
 }) {
   const handleIniciarServicio = () => {
     if (!puedeIniciar) return;
-    
-    const confirmacion = confirm(
-      `¿Estás seguro de que deseas iniciar el servicio?\n\n` +
-      `Cita: ${servicio.appointment_name || 'Sin número'}\n` +
-      `Cliente: ${servicio.client_name || 'No especificado'}\n` +
-      `Vehículo: ${servicio.asset_name || 'No especificado'}`
-    );
-    
-    if (confirmacion) {
-      onSeleccionar(servicio);
-    }
+    onIniciarServicio(servicio);
   };
 
   const esEnCurso = estado.estado === 'en_curso';
 
   const getStatusIndicator = () => {
     if (estado.estado === 'completado') return { color: 'bg-gray-400', label: 'Completado' };
-    if (estado.estado === 'en_curso') return { color: 'bg-gray-900', label: 'En curso' };
+    if (estado.estado === 'en_curso') return { color: 'bg-[#0F1C3F]', label: 'En curso' };
     if (estado.estado === 'pendiente') return { color: 'bg-gray-300', label: 'Pendiente' };
     return { color: 'bg-gray-200', label: 'Futuro' };
   };
@@ -601,7 +607,7 @@ function TarjetaServicio({
                   {servicio.appointment_name || 'Sin número de cita'}
                 </h3>
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-md ${
-                  estado.estado === 'en_curso' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'
+                  estado.estado === 'en_curso' ? 'bg-[#0F1C3F] text-white' : 'bg-gray-100 text-gray-600'
                 }`}>
                   {statusInfo.label}
                 </span>
@@ -623,7 +629,7 @@ function TarjetaServicio({
               {esEnCurso && (
                 <button
                   onClick={() => onSeleccionar(servicio)}
-                  className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                  className="px-4 py-2 bg-[#0F1C3F] text-white text-sm font-medium rounded-lg hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
                 >
                   Reanudar
                 </button>
@@ -631,7 +637,7 @@ function TarjetaServicio({
               {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
                 <button
                   onClick={handleIniciarServicio}
-                  className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                  className="px-4 py-2 bg-[#0F1C3F] text-white text-sm font-medium rounded-lg hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
                 >
                   Iniciar servicio
                 </button>

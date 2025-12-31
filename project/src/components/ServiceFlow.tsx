@@ -163,8 +163,8 @@ export function ServiceFlow({
                 <div className="flex items-center gap-2">
                   <div className={`
                     flex items-center justify-center w-8 h-8 rounded-full transition-all
-                    ${status === 'completed' ? 'bg-gray-900 text-white' : ''}
-                    ${status === 'current' ? 'bg-gray-900 text-white ring-2 ring-gray-300 ring-offset-2' : ''}
+                    ${status === 'completed' ? 'bg-[#0F1C3F] text-white' : ''}
+                    ${status === 'current' ? 'bg-[#0F1C3F] text-white ring-2 ring-[#A3C1DE] ring-offset-2' : ''}
                     ${status === 'pending' ? 'bg-gray-200 text-gray-400' : ''}
                   `}>
                     {status === 'completed' ? (
@@ -263,17 +263,17 @@ export function ServiceFlow({
               <div className="pt-6 border-t border-gray-100">
                 <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-[#0F1C3F] flex items-center justify-center">
                       <ClipboardCheck className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Pruebas completadas</p>
+                      <p className="text-sm font-medium text-[#0F1C3F]">Pruebas completadas</p>
                       <p className="text-xs text-gray-500">Continúa con la documentación final</p>
                     </div>
                   </div>
                   <button
                     onClick={onPruebasCompletadas}
-                    className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                    className="px-4 py-2 bg-[#0F1C3F] text-white text-sm font-medium rounded-lg hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
                   >
                     Continuar
                   </button>

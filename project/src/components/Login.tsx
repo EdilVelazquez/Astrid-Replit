@@ -41,18 +41,18 @@ export function Login() {
   }
 
   return (
-    <div key="login-form" className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+    <div key="login-form" className="min-h-screen bg-[#E8F0FE] flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-xl p-8">
         <div className="flex items-center justify-center mb-8">
-          <div className="bg-blue-600 rounded-full p-3">
+          <div className="bg-[#0F1C3F] rounded-full p-3">
             <LogIn className="w-8 h-8 text-white" />
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
+        <h1 className="text-2xl font-bold text-[#0F1C3F] text-center mb-2">
           Iniciar Sesión
         </h1>
-        <p className="text-gray-600 text-center mb-8">
+        <p className="text-gray-500 text-center mb-8">
           Accede al sistema ASTRID
         </p>
 
@@ -70,7 +70,7 @@ export function Login() {
                 placeholder="correo@ejemplo.com"
                 required
                 disabled={loading}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B588B] focus:border-[#3B588B] disabled:bg-gray-100"
               />
             </div>
           </div>
@@ -88,7 +88,7 @@ export function Login() {
                 placeholder="••••••••"
                 required
                 disabled={loading}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B588B] focus:border-[#3B588B] disabled:bg-gray-100"
               />
             </div>
           </div>
@@ -102,7 +102,7 @@ export function Login() {
           <button
             type="submit"
             disabled={loading || loadingGoogle}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 bg-[#0F1C3F] text-white rounded-lg font-semibold hover:bg-[#1A2B52] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-[#0F1C3F]"
           >
             {loading ? (
               <>
@@ -167,7 +167,7 @@ export function Login() {
           <button
             onClick={() => setShowRegister(true)}
             disabled={loading || loadingGoogle}
-            className="text-blue-600 hover:text-blue-700 font-medium flex items-center justify-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-[#3B588B] hover:text-[#0F1C3F] font-medium flex items-center justify-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <UserPlus className="w-4 h-4" />
             Crear Nueva Cuenta

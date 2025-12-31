@@ -218,13 +218,13 @@ export function PruebasActivas({
           <div className="flex gap-3">
             <button
               onClick={() => confirmarComando(tipo, true)}
-              className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
+              className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-500 transition-colors border border-emerald-600"
             >
               Confirmar sí
             </button>
             <button
               onClick={() => confirmarComando(tipo, false)}
-              className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+              className="flex-1 px-4 py-2 bg-white text-[#0F1C3F] rounded-lg font-medium hover:bg-gray-50 transition-colors border border-gray-300"
             >
               No funciona
             </button>
@@ -247,7 +247,7 @@ export function PruebasActivas({
               <button
                 onClick={() => enviarComando('bloqueo')}
                 disabled={comandos.bloqueo.estado !== null || bloqueoExitoso}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
               >
                 {comandos.bloqueo.estado === 'enviando' ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -265,7 +265,7 @@ export function PruebasActivas({
               <button
                 onClick={() => enviarComando('desbloqueo')}
                 disabled={comandos.desbloqueo.estado !== null || !bloqueoExitoso || desbloqueoExitoso}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
               >
                 {comandos.desbloqueo.estado === 'enviando' ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -287,7 +287,7 @@ export function PruebasActivas({
               <button
                 onClick={() => enviarComando('buzzer')}
                 disabled={comandos.buzzer.estado !== null || buzzerExitoso}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
               >
                 {comandos.buzzer.estado === 'enviando' ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -305,7 +305,7 @@ export function PruebasActivas({
               <button
                 onClick={() => enviarComando('buzzer-off')}
                 disabled={comandos['buzzer-off'].estado !== null || !buzzerExitoso || buzzerOffExitoso}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
               >
                 {comandos['buzzer-off'].estado === 'enviando' ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
