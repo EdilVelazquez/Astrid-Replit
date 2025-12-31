@@ -11,6 +11,7 @@ interface PruebasActivasProps {
   desbloqueoExitoso: boolean;
   buzzerExitoso: boolean;
   buzzerOffExitoso: boolean;
+  bloqueadas?: boolean;
   onSetBloqueoExitoso: (exitoso: boolean) => void;
   onSetDesbloqueoExitoso: (exitoso: boolean) => void;
   onSetBuzzerExitoso: (exitoso: boolean) => void;
@@ -36,6 +37,7 @@ export function PruebasActivas({
   desbloqueoExitoso,
   buzzerExitoso,
   buzzerOffExitoso,
+  bloqueadas = false,
   onSetBloqueoExitoso,
   onSetDesbloqueoExitoso,
   onSetBuzzerExitoso,
@@ -246,7 +248,7 @@ export function PruebasActivas({
             <div>
               <button
                 onClick={() => enviarComando('bloqueo')}
-                disabled={comandos.bloqueo.estado !== null || bloqueoExitoso}
+                disabled={comandos.bloqueo.estado !== null || bloqueoExitoso || bloqueadas}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
               >
                 {comandos.bloqueo.estado === 'enviando' ? (
@@ -264,7 +266,7 @@ export function PruebasActivas({
             <div>
               <button
                 onClick={() => enviarComando('desbloqueo')}
-                disabled={comandos.desbloqueo.estado !== null || !bloqueoExitoso || desbloqueoExitoso}
+                disabled={comandos.desbloqueo.estado !== null || !bloqueoExitoso || desbloqueoExitoso || bloqueadas}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
               >
                 {comandos.desbloqueo.estado === 'enviando' ? (
@@ -286,7 +288,7 @@ export function PruebasActivas({
             <div>
               <button
                 onClick={() => enviarComando('buzzer')}
-                disabled={comandos.buzzer.estado !== null || buzzerExitoso}
+                disabled={comandos.buzzer.estado !== null || buzzerExitoso || bloqueadas}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
               >
                 {comandos.buzzer.estado === 'enviando' ? (
@@ -304,7 +306,7 @@ export function PruebasActivas({
             <div>
               <button
                 onClick={() => enviarComando('buzzer-off')}
-                disabled={comandos['buzzer-off'].estado !== null || !buzzerExitoso || buzzerOffExitoso}
+                disabled={comandos['buzzer-off'].estado !== null || !buzzerExitoso || buzzerOffExitoso || bloqueadas}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
               >
                 {comandos['buzzer-off'].estado === 'enviando' ? (

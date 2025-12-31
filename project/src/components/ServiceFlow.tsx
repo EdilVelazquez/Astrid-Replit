@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
 import { ExpedienteServicio } from '../types';
-import { CheckCircle2, ChevronRight, RefreshCcw, Car, Cpu, ClipboardCheck, FileCheck } from 'lucide-react';
+import { CheckCircle2, ChevronRight, RefreshCcw, Car, Cpu, ClipboardCheck, FileCheck, AlertCircle } from 'lucide-react';
 import { PrefolioForm } from './PrefolioForm';
 import { PruebasPasivas } from './PruebasPasivas';
 import { PruebasActivas } from './PruebasActivas';
@@ -38,6 +37,7 @@ interface ServiceFlowProps {
   onSetUbicacionFechaPreguntada: (value: string | null) => void;
   onErrorPanel: (msg: string) => void;
   onLogConsola: (msg: string) => void;
+  pruebasBloqueadas: boolean;
   onPruebasCompletadas: () => void;
   onFormularioCierreCompletado: () => void;
   onCancelarCierre: () => void;
@@ -55,7 +55,7 @@ export function ServiceFlow({
   expediente,
   esn,
   prefolioCompletado,
-  pruebasCompletadas,
+  pruebasCompletadas: _pruebasCompletadas,
   mostrarFormularioCierre,
   ignicionExitosa,
   botonExitoso,
@@ -81,6 +81,7 @@ export function ServiceFlow({
   onSetUbicacionFechaPreguntada,
   onErrorPanel,
   onLogConsola,
+  pruebasBloqueadas,
   onPruebasCompletadas,
   onFormularioCierreCompletado,
   onCancelarCierre,
@@ -121,11 +122,19 @@ export function ServiceFlow({
 
   const todasLasPruebasCompletas = pruebasPasivasCompletas && pruebasActivasCompletas;
 
-  useEffect(() => {
-    if (todasLasPruebasCompletas && !pruebasCompletadas && esn) {
-      onPruebasCompletadas();
-    }
-  }, [todasLasPruebasCompletas, pruebasCompletadas, esn]);
+  const obtenerPruebasPendientes = (): string[] => {
+    const pendientes: string[] = [];
+    if (!ignicionExitosa) pendientes.push('Ignición');
+    if (requiereBoton && !botonExitoso) pendientes.push('Botón de pánico');
+    if (!ubicacionExitosa) pendientes.push('Ubicación');
+    if (requiereBloqueo && !bloqueoExitoso) pendientes.push('Bloqueo');
+    if (requiereBloqueo && !desbloqueoExitoso) pendientes.push('Desbloqueo');
+    if (requiereBuzzer && !buzzerExitoso) pendientes.push('Buzzer On');
+    if (requiereBuzzer && !buzzerOffExitoso) pendientes.push('Buzzer Off');
+    return pendientes;
+  };
+
+  const pruebasPendientes = obtenerPruebasPendientes();
 
   const expedienteId = generarExpedienteId(
     expediente.work_order_name || null,
@@ -228,6 +237,7 @@ export function ServiceFlow({
                 ubicacionFechaPreguntada={ubicacionFechaPreguntada ?? null}
                 pruebasRequeridas={pruebasRequeridas}
                 esperandoComandoActivo={esperandoComandoActivo}
+                bloqueadas={pruebasBloqueadas}
                 onSetIgnicionExitosa={onSetIgnicionExitosa}
                 onSetBotonExitoso={onSetBotonExitoso}
                 onSetUbicacionExitosa={onSetUbicacionExitosa}
@@ -249,6 +259,7 @@ export function ServiceFlow({
                   desbloqueoExitoso={desbloqueoExitoso}
                   buzzerExitoso={buzzerExitoso}
                   buzzerOffExitoso={buzzerOffExitoso}
+                  bloqueadas={pruebasBloqueadas}
                   onSetBloqueoExitoso={onSetBloqueoExitoso}
                   onSetDesbloqueoExitoso={onSetDesbloqueoExitoso}
                   onSetBuzzerExitoso={onSetBuzzerExitoso}
@@ -259,8 +270,8 @@ export function ServiceFlow({
               </div>
             )}
 
-            {todasLasPruebasCompletas && !mostrarFormularioCierre && (
-              <div className="pt-6 border-t border-gray-100">
+            <div className="pt-6 border-t border-gray-200 mt-6">
+              {todasLasPruebasCompletas ? (
                 <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#0F1C3F] flex items-center justify-center">
@@ -268,18 +279,32 @@ export function ServiceFlow({
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[#0F1C3F]">Pruebas completadas</p>
-                      <p className="text-xs text-gray-500">Continúa con la documentación final</p>
+                      <p className="text-xs text-gray-500">Todas las pruebas han sido realizadas exitosamente</p>
                     </div>
                   </div>
                   <button
                     onClick={onPruebasCompletadas}
-                    className="px-4 py-2 bg-[#0F1C3F] text-white text-sm font-medium rounded-lg hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
+                    className="px-5 py-2.5 bg-[#0F1C3F] text-white text-sm font-medium rounded-lg hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F] shadow-sm"
                   >
-                    Continuar
+                    Continuar a Documentación Final
                   </button>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-800">Pruebas pendientes</p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        Completa las siguientes pruebas para continuar: {pruebasPendientes.join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

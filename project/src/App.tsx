@@ -51,6 +51,7 @@ function TechnicianApp() {
   const [todosLosServicios, setTodosLosServicios] = useState<ExpedienteServicio[]>([]);
   const [pruebasCompletadas, setPruebasCompletadas] = useState(false);
   const [mostrarFormularioCierre, setMostrarFormularioCierre] = useState(false);
+  const [pruebasBloqueadas, setPruebasBloqueadas] = useState(false);
   const [mostrarMisServicios, setMostrarMisServicios] = useState(false);
 
 
@@ -402,6 +403,7 @@ function TechnicianApp() {
       setPrefolioCompletado(false);
       setPruebasCompletadas(false);
       setMostrarFormularioCierre(false);
+      setPruebasBloqueadas(false);
       setServicioFinalizado(false);
       setValidationSummary(null);
       setEsnTemporal('');
@@ -903,9 +905,11 @@ function TechnicianApp() {
                   onSetUbicacionFechaPreguntada={(fecha) => dispatch({ type: 'SET_UBICACION_FECHA_PREGUNTADA', payload: fecha })}
                   onErrorPanel={setErrorPanel}
                   onLogConsola={agregarLogConsola}
+                  pruebasBloqueadas={pruebasBloqueadas}
                   onPruebasCompletadas={() => {
                     agregarLogConsola('✅ Técnico confirmó pruebas - avanzando a formulario de cierre');
                     setPruebasCompletadas(true);
+                    setPruebasBloqueadas(true);
                     setMostrarFormularioCierre(true);
                   }}
                   onFormularioCierreCompletado={handleFormularioCierreCompletado}

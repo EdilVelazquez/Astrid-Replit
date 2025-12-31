@@ -13,6 +13,7 @@ interface PruebasPasivasProps {
   botonFechaPreguntada: string | null;
   ubicacionFechaPreguntada: string | null;
   esperandoComandoActivo: boolean;
+  bloqueadas?: boolean;
   onSetIgnicionExitosa: (exitoso: boolean) => void;
   onSetBotonExitoso: (exitoso: boolean) => void;
   onSetUbicacionExitosa: (exitoso: boolean) => void;
@@ -32,6 +33,7 @@ export function PruebasPasivas({
   botonFechaPreguntada,
   ubicacionFechaPreguntada,
   esperandoComandoActivo,
+  bloqueadas = false,
   onSetIgnicionExitosa,
   onSetBotonExitoso,
   onSetUbicacionExitosa,
@@ -139,10 +141,15 @@ export function PruebasPasivas({
   };
 
   const handleDetenerClick = () => {
+    if (bloqueadas) return;
     setMostrarConfirmacion(true);
   };
 
   const handleConfirmarDetencion = () => {
+    if (bloqueadas) {
+      setMostrarConfirmacion(false);
+      return;
+    }
     detenerConsultasManual();
     setMostrarConfirmacion(false);
   };
@@ -152,12 +159,18 @@ export function PruebasPasivas({
   };
 
   const handleReanudar = () => {
+    if (bloqueadas) return;
     reanudarConsultas();
   };
 
+  useEffect(() => {
+    if (bloqueadas && mostrarConfirmacion) {
+      setMostrarConfirmacion(false);
+    }
+  }, [bloqueadas, mostrarConfirmacion]);
+
   const preguntaBoton = preguntasPendientes.find(p => p.tipo === 'boton');
   const preguntaUbicacion = preguntasPendientes.find(p => p.tipo === 'ubicacion');
-  const hayPreguntas = preguntasPendientes.length > 0 && !esperandoComandoActivo;
   const todasPruebasCompletadas =
     (!requiereIgnicion || ignicionExitosa) &&
     (!requiereBoton || botonExitoso) &&
@@ -254,7 +267,8 @@ export function PruebasPasivas({
           </div>
           <button
             onClick={handleReanudar}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
+            disabled={bloqueadas}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
           >
             <PlayCircle className="w-4 h-4" />
             Reanudar consultas
@@ -281,7 +295,8 @@ export function PruebasPasivas({
           {!detencionManual ? (
             <button
               onClick={handleDetenerClick}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-[#0F1C3F] rounded-lg font-medium hover:bg-gray-50 transition-colors border border-gray-300"
+              disabled={bloqueadas}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-[#0F1C3F] rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-gray-300"
             >
               <StopCircle className="w-4 h-4" />
               Detener consultas (DEV)
@@ -289,7 +304,8 @@ export function PruebasPasivas({
           ) : (
             <button
               onClick={handleReanudar}
-              className="flex items-center gap-2 px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
+              disabled={bloqueadas}
+              className="flex items-center gap-2 px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
             >
               <PlayCircle className="w-4 h-4" />
               Reanudar consultas
@@ -329,7 +345,8 @@ export function PruebasPasivas({
                 </p>
                 <button
                   onClick={() => marcarPruebaManual('ignicion')}
-                  className="w-full px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
+                  disabled={bloqueadas}
+                  className="w-full px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
                 >
                   ✓ Marcar Ignición como exitosa
                 </button>
@@ -363,7 +380,8 @@ export function PruebasPasivas({
                 </p>
                 <button
                   onClick={() => marcarPruebaManual('boton')}
-                  className="w-full px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
+                  disabled={bloqueadas}
+                  className="w-full px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
                 >
                   ✓ Marcar Botón de pánico como exitoso
                 </button>
@@ -381,14 +399,14 @@ export function PruebasPasivas({
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleConfirmar('boton', true)}
-                    disabled={consultando}
+                    disabled={consultando || bloqueadas}
                     className="flex-1 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-emerald-600"
                   >
                     Sí
                   </button>
                   <button
                     onClick={() => handleConfirmar('boton', false)}
-                    disabled={consultando}
+                    disabled={consultando || bloqueadas}
                     className="flex-1 px-3 py-2 bg-white text-[#0F1C3F] rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-gray-300"
                   >
                     No
@@ -424,7 +442,8 @@ export function PruebasPasivas({
                 </p>
                 <button
                   onClick={() => marcarPruebaManual('ubicacion')}
-                  className="w-full px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
+                  disabled={bloqueadas}
+                  className="w-full px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
                 >
                   ✓ Marcar Ubicación como exitosa
                 </button>
@@ -461,14 +480,14 @@ export function PruebasPasivas({
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleConfirmar('ubicacion', true)}
-                    disabled={consultando}
+                    disabled={consultando || bloqueadas}
                     className="flex-1 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-emerald-600"
                   >
                     Sí, confirmar ubicación
                   </button>
                   <button
                     onClick={() => handleConfirmar('ubicacion', false)}
-                    disabled={consultando}
+                    disabled={consultando || bloqueadas}
                     className="flex-1 px-3 py-2 bg-white text-[#0F1C3F] rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-gray-300"
                   >
                     No
