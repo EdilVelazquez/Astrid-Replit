@@ -1,11 +1,22 @@
 const TRANSITION_WEBHOOK_URL = 'https://aiwebhookn8n.numaris.com/webhook/c8cb35f5-2567-4584-b7f1-319fdf830443';
 
 export interface TransitionWebhookParams {
-  action: 'start_work' | 'complete_work';
+  action: 'start_work' | 'complete_work' | 'create_asset' | 'edit_asset';
   appointment_name?: string;
   work_order_name?: string;
   esn?: string;
   technician_email?: string;
+  asset_data?: {
+    vin?: string;
+    vin_original?: string;
+    placas?: string;
+    color?: string;
+    marca?: string;
+    modelo?: string;
+    año?: string;
+    numero_economico?: string;
+    odometro?: string;
+  };
 }
 
 export interface TransitionWebhookResponse {
@@ -105,6 +116,59 @@ export async function notificarTrabajoCompletado(params: {
 }): Promise<TransitionWebhookResponse> {
   return enviarTransicionServicio({
     action: 'complete_work',
+    ...params
+  });
+}
+
+/**
+ * Envía notificación de creación de asset (create_asset)
+ * Se usa cuando el VIN escaneado es diferente al VIN original del servicio
+ */
+export async function notificarCreacionAsset(params: {
+  appointment_name: string;
+  work_order_name: string;
+  esn: string;
+  technician_email: string;
+  asset_data: {
+    vin: string;
+    vin_original: string;
+    placas?: string;
+    color?: string;
+    marca?: string;
+    modelo?: string;
+    año?: string;
+    numero_economico?: string;
+    odometro?: string;
+  };
+}): Promise<TransitionWebhookResponse> {
+  return enviarTransicionServicio({
+    action: 'create_asset',
+    ...params
+  });
+}
+
+/**
+ * Envía notificación de edición de asset (edit_asset)
+ * Se usa cuando se modifican datos del vehículo (excepto VIN)
+ */
+export async function notificarEdicionAsset(params: {
+  appointment_name: string;
+  work_order_name: string;
+  esn: string;
+  technician_email: string;
+  asset_data: {
+    vin?: string;
+    placas?: string;
+    color?: string;
+    marca?: string;
+    modelo?: string;
+    año?: string;
+    numero_economico?: string;
+    odometro?: string;
+  };
+}): Promise<TransitionWebhookResponse> {
+  return enviarTransicionServicio({
+    action: 'edit_asset',
     ...params
   });
 }

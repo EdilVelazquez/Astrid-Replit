@@ -16,9 +16,11 @@ project/
 │   ├── components/         # Componentes React
 │   │   ├── admin/         # Panel de administración
 │   │   ├── Login.tsx      # Autenticación
-│   │   ├── PrefolioForm.tsx # Formulario pre-servicio
+│   │   ├── PrefolioForm.tsx # Paso 1: Formulario pre-servicio
 │   │   ├── PruebasActivas.tsx # Pruebas activas (bloqueo, buzzer)
 │   │   ├── PruebasPasivas.tsx # Pruebas pasivas (ignición, ubicación)
+│   │   ├── FormularioCierre.tsx # Paso 2: Cierre de servicio
+│   │   ├── SignaturePad.tsx # Componente de firma digital
 │   │   └── ...
 │   ├── services/          # Servicios de API
 │   ├── contexts/          # Context providers (Auth)
@@ -41,20 +43,50 @@ project/
 - `npm run build` - Build de producción
 - `npm run preview` - Preview del build
 
-## Flujo de la Aplicación
+## Flujo de la Aplicación (Actualizado)
+
+### Paso 1: Inicio de Servicio
 1. Técnico inicia sesión (Supabase Auth)
 2. Ve calendario con servicios asignados
-3. Selecciona servicio del día
-4. Completa formulario de prefolio (escanea ESN, VIN, placa)
-5. Realiza pruebas pasivas (ignición, botón pánico, ubicación)
-6. Realiza pruebas activas (bloqueo, desbloqueo, buzzer)
-7. Completa formulario de cierre
-8. Servicio finalizado
+3. Hace clic en botón "Iniciar servicio" (requiere confirmación)
+4. Webhook `start_work` enviado
+5. Completa formulario de prefolio:
+   - Escanea ESN, VIN, placa
+   - Toma fotos obligatorias
+   - Si VIN cambió → webhook `create_asset`
+   - Si otros datos cambiaron → webhook `edit_asset`
+6. Realiza pruebas pasivas (ignición, botón pánico, ubicación)
+7. Realiza pruebas activas (bloqueo, desbloqueo, buzzer)
+
+### Paso 2: Cierre de Servicio
+1. Selecciona tipo de corte (Ignición/Bomba/Marcha)
+2. Toma fotos obligatorias:
+   - Instalación del equipo
+   - Conexión de corriente
+   - Conexión de tierra
+   - Conexión de ignición
+   - Conexión ignición y corte
+   - Botón de pánico
+3. Agrega fotos adicionales (opcional, hasta 5 bloques)
+4. Captura recepción del vehículo:
+   - Nombre de quien recibe
+   - Firma digital
+   - Foto de la persona
+5. Webhook `complete_work` enviado
+6. Servicio marcado como COMPLETADO
+
+## Webhooks del Sistema
+- `start_work` - Al iniciar servicio (desde PrefolioForm)
+- `complete_work` - Al finalizar servicio (desde FormularioCierre)
+- `create_asset` - Cuando VIN escaneado difiere del original
+- `edit_asset` - Cuando otros datos del vehículo cambian
 
 ## Notas de Desarrollo
 - La app requiere conexión a un proyecto Supabase externo existente
 - Las migraciones en `/supabase/migrations/` definen el esquema de BD
 - Puerto de desarrollo: 5000
+- El servicio solo puede iniciarse desde el botón dedicado (no clic en tarjeta)
+- El servicio solo puede iniciarse el día programado
 
 ## API de Exportación de Datos
 La aplicación incluye una API REST para exportar datos de las tablas de Supabase en tiempo real.
