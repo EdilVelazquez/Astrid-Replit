@@ -93,6 +93,30 @@ project/
 
 ## Diseño de UI/UX (Actualizado)
 
+### Sistema de Diseño Numaris
+La aplicación utiliza un sistema de diseño inspirado en Numaris, con una paleta de colores unificada y componentes reutilizables.
+
+#### Paleta de Colores (`src/styles/colors.ts`)
+- **Primary**: Navy blue #0F1C3F (botones principales, stepper activo, indicadores "en curso")
+- **Primary Hover**: #1A2B52
+- **Background**: Light blue #E8F0FE (fondo de pantallas)
+- **Surface**: White (tarjetas, modales)
+- **Neutral**: Escala de grises (text, borders, backgrounds)
+- **Success**: Emerald #10B981 (botón de confirmación positiva)
+- **Warning**: Amber #F59E0B
+- **Error**: Red #EF4444
+
+#### Componentes UI Reutilizables (`src/components/ui/`)
+- **Modal**: Modal base con backdrop blur, tecla Escape para cerrar
+- **ConfirmModal**: Para confirmaciones de 2 botones (Sí/No, Confirmar/Cancelar)
+- **AlertModal**: Para mensajes informativos con un solo botón
+
+#### Estandarización de Botones
+- **Primary**: bg-[#0F1C3F] text-white border-[#0F1C3F] - Acciones principales
+- **Secondary**: bg-white text-gray-700 border-gray-300 - Acciones secundarias
+- **Success**: bg-emerald-500 text-white - Confirmaciones positivas
+- **Todas las confirmaciones del sistema** usan ConfirmModal en lugar de `window.confirm()`
+
 ### Header / Barra Superior
 - **Identidad**: Nombre "Astrid" como marca del producto
 - **Estilo**: Minimalista, profesional, tonos neutros
@@ -109,7 +133,8 @@ project/
 ### Flujo de Servicio Unificado (ServiceFlow)
 - **Contenedor único**: Todo el servicio vive en un solo componente visual
 - **Stepper visual**: Indicador de progreso con 3 pasos (Datos del Vehículo → Pruebas del Dispositivo → Documentación Final)
-- **Diseño neutro**: Colores gray-900 para pasos completados/activos, gray-200 para pendientes
+- **Diseño Numaris**: Colores navy #0F1C3F para pasos completados/activos, gray-200 para pendientes
+- **Botón Continuar**: Aparece automáticamente cuando todas las pruebas del dispositivo están completas
 - **Transiciones suaves**: Sin cortes bruscos entre secciones, flujo continuo de arriba a abajo
 - **Sin etiquetas numéricas**: Solo iconos y nombres de etapa en el header
 - **Componente principal**: `src/components/ServiceFlow.tsx`
