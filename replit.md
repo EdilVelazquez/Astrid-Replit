@@ -16,11 +16,14 @@ project/
 │   ├── components/         # Componentes React
 │   │   ├── admin/         # Panel de administración
 │   │   ├── Login.tsx      # Autenticación
-│   │   ├── PrefolioForm.tsx # Paso 1: Formulario pre-servicio
+│   │   ├── ServiceFlow.tsx # Contenedor unificado del flujo de servicio (stepper)
+│   │   ├── PrefolioForm.tsx # Datos del vehículo y dispositivo
 │   │   ├── PruebasActivas.tsx # Pruebas activas (bloqueo, buzzer)
 │   │   ├── PruebasPasivas.tsx # Pruebas pasivas (ignición, ubicación)
-│   │   ├── FormularioCierre.tsx # Paso 2: Cierre de servicio
+│   │   ├── FormularioCierre.tsx # Documentación final
 │   │   ├── SignaturePad.tsx # Componente de firma digital
+│   │   ├── CalendarioTecnico.tsx # Vista de agenda con filtros
+│   │   ├── Header.tsx     # Barra superior con navegación
 │   │   └── ...
 │   ├── services/          # Servicios de API
 │   ├── contexts/          # Context providers (Auth)
@@ -103,11 +106,13 @@ project/
   - Botón "Cerrar sesión" dentro del dropdown (no visible como texto)
 - **Componente**: `src/components/Header.tsx`
 
-### Flujo de Pruebas
-- Pantalla unificada con flujo lineal de arriba hacia abajo
-- Orden: Resumen del servicio → ESN/Dispositivo → Pruebas Pasivas → Pruebas Activas → Botón "Confirmar y Continuar"
-- El botón de confirmación aparece SOLO al final después de todas las pruebas
-- Sin etiquetas "Paso 1" / "Paso 2" visibles al técnico (solo interno)
+### Flujo de Servicio Unificado (ServiceFlow)
+- **Contenedor único**: Todo el servicio vive en un solo componente visual
+- **Stepper visual**: Indicador de progreso con 3 pasos (Datos del Vehículo → Pruebas del Dispositivo → Documentación Final)
+- **Diseño neutro**: Colores gray-900 para pasos completados/activos, gray-200 para pendientes
+- **Transiciones suaves**: Sin cortes bruscos entre secciones, flujo continuo de arriba a abajo
+- **Sin etiquetas numéricas**: Solo iconos y nombres de etapa en el header
+- **Componente principal**: `src/components/ServiceFlow.tsx`
 
 ### Acciones de Reinicio
 - **Cambiar Dispositivo**: Resetea SOLO las pruebas, mantiene datos del vehículo
