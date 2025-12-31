@@ -101,11 +101,15 @@ project/
 - **Reiniciar Servicio**: Vuelve al estado inicial completo (nuevo servicio)
 
 ### Dashboard/Calendario
-- Servicios muestran indicador de estado (EN CURSO, PENDIENTE, COMPLETADO, BLOQUEADO)
+- Vista unificada de servicios (sin duplicación "Servicios del día" + "Mi agenda")
+- Dos modos de visualización intercambiables:
+  - **Modo Lista**: Tabla compacta con Hora, AP/Folio, Cliente, Estado, Acción
+  - **Modo Tarjeta**: Vista detallada con información completa del servicio
+- Filtros de estado (Todos/Pendientes/En Curso/Completados) aplican a ambos modos
+- Navegación de fecha aplica a ambos modos
 - Servicios en progreso muestran botón "Reanudar" 
-- Servicios pendientes del día muestran botón "Iniciar servicio"
-- Sin distinción visual de "servicio seleccionado"
-- Permite manejar múltiples servicios simultáneamente
+- Servicios pendientes del día muestran botón "Iniciar"
+- Servicios completados solo se muestran como histórico (sin acciones)
 
 ## API de Exportación de Datos
 La aplicación incluye una API REST para exportar datos de las tablas de Supabase en tiempo real.
