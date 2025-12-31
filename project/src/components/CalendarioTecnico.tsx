@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ExpedienteServicio } from '../types';
-import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, Filter, Building2, MapPin, FileText, ClipboardList, LayoutGrid } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2 } from 'lucide-react';
 
 function formatearFechaLocal(fecha: Date): string {
   const year = fecha.getFullYear();
@@ -414,208 +414,158 @@ export default function CalendarioTecnico({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-8 h-8 text-blue-600" />
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Mi Agenda</h1>
-                  <p className="text-sm text-gray-500">Calendario de servicios</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => cambiarFecha('anterior')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Anterior"
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-700" />
-                </button>
-                <button
-                  onClick={irHoy}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Hoy
-                </button>
-                <button
-                  onClick={() => cambiarFecha('siguiente')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Siguiente"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-700" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-900 capitalize">
-                {formatearRangoFecha()}
-              </h2>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setVistaActual('dia')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    vistaActual === 'dia'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Día
-                </button>
-                <button
-                  onClick={() => setVistaActual('semana')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    vistaActual === 'semana'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Semana
-                </button>
-                <button
-                  onClick={() => setVistaActual('mes')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    vistaActual === 'mes'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Mes
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-5 gap-3 mb-6">
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <List className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-900">Total</span>
-                </div>
-                <div className="text-2xl font-bold text-blue-600">{resumen.total}</div>
-              </div>
-
-              <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <AlertCircle className="w-4 h-4 text-yellow-600" />
-                  <span className="text-sm font-medium text-yellow-900">Pendientes</span>
-                </div>
-                <div className="text-2xl font-bold text-yellow-600">{resumen.pendientes}</div>
-              </div>
-
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-900">En Curso</span>
-                </div>
-                <div className="text-2xl font-bold text-blue-600">{resumen.enCurso}</div>
-              </div>
-
-              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-900">Completados</span>
-                </div>
-                <div className="text-2xl font-bold text-green-600">{resumen.completados}</div>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <Lock className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-900">Futuros</span>
-                </div>
-                <div className="text-2xl font-bold text-gray-600">{resumen.bloqueados}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <Filter className="w-5 h-5 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">Filtrar:</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setFiltroEstado('todos')}
-                    className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-                      filtroEstado === 'todos'
-                        ? 'bg-gray-800 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Todos
-                  </button>
-                  <button
-                    onClick={() => setFiltroEstado('pendiente')}
-                    className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-                      filtroEstado === 'pendiente'
-                        ? 'bg-yellow-600 text-white'
-                        : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                    }`}
-                  >
-                    Pendientes
-                  </button>
-                  <button
-                    onClick={() => setFiltroEstado('en_curso')}
-                    className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-                      filtroEstado === 'en_curso'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                    }`}
-                  >
-                    En Curso
-                  </button>
-                  <button
-                    onClick={() => setFiltroEstado('completado')}
-                    className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-                      filtroEstado === 'completado'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-green-50 text-green-700 hover:bg-green-100'
-                    }`}
-                  >
-                    Completados
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Vista:</span>
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setModoVisualizacion('lista')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
-                      modoVisualizacion === 'lista'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                    title="Vista compacta"
-                  >
-                    <List className="w-4 h-4" />
-                    Lista
-                  </button>
-                  <button
-                    onClick={() => setModoVisualizacion('tarjeta')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
-                      modoVisualizacion === 'tarjeta'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                    title="Vista detallada"
-                  >
-                    <LayoutGrid className="w-4 h-4" />
-                    Tarjeta
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-6">
-            {renderVistaCalendario()}
-          </div>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => cambiarFecha('anterior')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Anterior"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-500" />
+          </button>
+          <span className="text-base font-medium text-gray-800 capitalize min-w-[180px] text-center">
+            {formatearRangoFecha()}
+          </span>
+          <button
+            onClick={() => cambiarFecha('siguiente')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Siguiente"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-500" />
+          </button>
+          <button
+            onClick={irHoy}
+            className="ml-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Hoy
+          </button>
         </div>
+
+        <div className="flex bg-gray-100 rounded-lg p-0.5">
+          <button
+            onClick={() => setVistaActual('dia')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              vistaActual === 'dia'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Día
+          </button>
+          <button
+            onClick={() => setVistaActual('semana')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              vistaActual === 'semana'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Semana
+          </button>
+          <button
+            onClick={() => setVistaActual('mes')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              vistaActual === 'mes'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Mes
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {[
+          { key: 'total', label: 'Total', value: resumen.total },
+          { key: 'pendientes', label: 'Pendientes', value: resumen.pendientes },
+          { key: 'en_curso', label: 'En curso', value: resumen.enCurso },
+          { key: 'completados', label: 'Completados', value: resumen.completados },
+          { key: 'futuros', label: 'Futuros', value: resumen.bloqueados }
+        ].map(item => {
+          const isActive = 
+            (item.key === 'total' && filtroEstado === 'todos') ||
+            (item.key === 'pendientes' && filtroEstado === 'pendiente') ||
+            (item.key === 'en_curso' && filtroEstado === 'en_curso') ||
+            (item.key === 'completados' && filtroEstado === 'completado');
+          
+          const handleClick = () => {
+            if (item.key === 'total') setFiltroEstado('todos');
+            else if (item.key === 'pendientes') setFiltroEstado('pendiente');
+            else if (item.key === 'en_curso') setFiltroEstado('en_curso');
+            else if (item.key === 'completados') setFiltroEstado('completado');
+          };
+
+          return (
+            <button
+              key={item.key}
+              onClick={handleClick}
+              className={`
+                flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all
+                ${isActive 
+                  ? 'bg-white border-gray-300 shadow-sm' 
+                  : 'bg-gray-50 border-transparent hover:bg-gray-100'
+                }
+              `}
+            >
+              <span className="text-lg font-semibold text-gray-800">{item.value}</span>
+              <span className="text-sm text-gray-500">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex bg-gray-100 rounded-lg p-0.5">
+          {[
+            { key: 'todos', label: 'Todos' },
+            { key: 'pendiente', label: 'Pendientes' },
+            { key: 'en_curso', label: 'En curso' },
+            { key: 'completado', label: 'Completados' }
+          ].map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFiltroEstado(f.key as FiltroEstado)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                filtroEstado === f.key
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex bg-gray-100 rounded-lg p-0.5">
+          <button
+            onClick={() => setModoVisualizacion('lista')}
+            className={`p-2 rounded-md transition-colors ${
+              modoVisualizacion === 'lista'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            title="Vista lista"
+          >
+            <List className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setModoVisualizacion('tarjeta')}
+            className={`p-2 rounded-md transition-colors ${
+              modoVisualizacion === 'tarjeta'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            title="Vista tarjeta"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        {renderVistaCalendario()}
       </div>
     </div>
   );
@@ -634,13 +584,6 @@ function TarjetaServicio({
   onSeleccionar: (servicio: ExpedienteServicio) => void;
   formatearHora: (fecha: string) => string;
 }) {
-  const getBorderColor = () => {
-    if (estado.estado === 'completado') return 'border-green-300';
-    if (estado.estado === 'en_curso') return 'border-blue-300';
-    if (estado.estado === 'pendiente') return 'border-yellow-300';
-    return 'border-gray-300';
-  };
-
   const handleIniciarServicio = () => {
     if (!puedeIniciar) return;
     
@@ -658,175 +601,98 @@ function TarjetaServicio({
 
   const esEnCurso = estado.estado === 'en_curso';
 
+  const getStatusBadge = () => {
+    const baseClass = "px-2 py-0.5 text-xs font-medium rounded-full";
+    if (estado.estado === 'completado') return <span className={`${baseClass} bg-gray-100 text-gray-600`}>Completado</span>;
+    if (estado.estado === 'en_curso') return <span className={`${baseClass} bg-gray-800 text-white`}>En curso</span>;
+    if (estado.estado === 'pendiente') return <span className={`${baseClass} bg-gray-100 text-gray-600`}>Pendiente</span>;
+    return <span className={`${baseClass} bg-gray-100 text-gray-500`}>Futuro</span>;
+  };
+
   return (
-    <div
-      className={`border-2 rounded-lg p-4 transition-all ${estado.color} ${getBorderColor()}`}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <div className={`${estado.colorTexto}`}>
-              {estado.icono}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-gray-900">
-                  {servicio.appointment_name || 'Sin número de cita'}
-                </span>
-                {servicio.is_test_service && (
-                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded border border-purple-300">
-                    🧪 PRUEBAS
-                  </span>
-                )}
-                {servicio.scheduled_start_time && (
-                  <span className="text-sm text-gray-600 font-medium">
-                    {formatearHora(servicio.scheduled_start_time)}
-                  </span>
-                )}
-                {estado.estado === 'bloqueado' && (
-                  <span className="px-2 py-1 bg-gray-200 text-gray-600 text-xs font-bold rounded">
-                    BLOQUEADO
-                  </span>
-                )}
-                {estado.estado === 'completado' && (
-                  <span className="px-2 py-1 bg-green-200 text-green-800 text-xs font-bold rounded">
-                    COMPLETADO
-                  </span>
-                )}
-                {estado.estado === 'en_curso' && (
-                  <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs font-bold rounded">
-                    EN CURSO
-                  </span>
-                )}
-              </div>
-              <div className="text-sm text-gray-600">
-                {servicio.work_order_name || 'Sin orden de trabajo'}
-              </div>
-            </div>
+    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-semibold text-gray-900 truncate">
+              {servicio.appointment_name || 'Sin número de cita'}
+            </span>
+            {servicio.scheduled_start_time && (
+              <span className="text-sm text-gray-500 flex-shrink-0">
+                {formatearHora(servicio.scheduled_start_time)}
+              </span>
+            )}
+            {getStatusBadge()}
+            {servicio.is_test_service && (
+              <span className="px-2 py-0.5 text-xs font-medium bg-purple-50 text-purple-700 rounded-full">
+                Test
+              </span>
+            )}
           </div>
+          
+          <p className="text-sm text-gray-600 mb-3">
+            {servicio.client_name || 'Cliente no especificado'}
+          </p>
 
-          <div className="space-y-3 mt-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+            {servicio.asset_name && (
               <div>
-                <span className="text-gray-500">Cliente:</span>
-                <div className="font-medium text-gray-900">
-                  {servicio.client_name || 'No especificado'}
-                </div>
+                <span className="text-gray-400 text-xs">Vehículo</span>
+                <p className="text-gray-700 truncate">{servicio.asset_name}</p>
               </div>
+            )}
+            {servicio.service_type && (
               <div>
-                <span className="text-gray-500">Vehículo:</span>
-                <div className="font-medium text-gray-900">
-                  {servicio.asset_name || 'No especificado'}
-                </div>
+                <span className="text-gray-400 text-xs">Tipo</span>
+                <p className="text-gray-700 truncate">{servicio.service_type}</p>
               </div>
-              <div>
-                <span className="text-gray-500">Tipo de servicio:</span>
-                <div className="font-medium text-gray-900">
-                  {servicio.service_type || 'No especificado'}
-                </div>
-              </div>
-              {servicio.device_esn && (
-                <div>
-                  <span className="text-gray-500">Dispositivo:</span>
-                  <div className="font-mono font-medium text-gray-900">
-                    {servicio.device_esn}
-                  </div>
-                </div>
-              )}
-              {servicio.status && (
-                <div>
-                  <span className="text-gray-500">Estado TCV:</span>
-                  <div className="font-medium text-gray-900">
-                    {servicio.status}
-                  </div>
-                </div>
-              )}
-              {servicio.tipo_de_acta && (
-                <div>
-                  <span className="text-gray-500">Tipo de acta:</span>
-                  <div className="font-medium text-gray-900">
-                    {servicio.tipo_de_acta}
-                  </div>
-                </div>
-              )}
-            </div>
-
+            )}
             {servicio.company_name && (
-              <div className="border-t border-gray-200 pt-3">
-                <div className="flex items-start gap-2 text-sm">
-                  <Building2 className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <span className="text-gray-500 block">Empresa:</span>
-                    <div className="font-medium text-gray-900">{servicio.company_name}</div>
-                  </div>
-                </div>
+              <div>
+                <span className="text-gray-400 text-xs">Empresa</span>
+                <p className="text-gray-700 truncate">{servicio.company_name}</p>
               </div>
             )}
-
-            {(servicio.service_street || servicio.service_city || servicio.service_state) && (
-              <div className="border-t border-gray-200 pt-3">
-                <div className="flex items-start gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <span className="text-gray-500 block">Ubicación del servicio:</span>
-                    <div className="font-medium text-gray-900">
-                      {[
-                        servicio.service_street,
-                        servicio.service_city,
-                        servicio.service_state,
-                        servicio.service_zip_code
-                      ].filter(Boolean).join(', ')}
-                    </div>
-                  </div>
-                </div>
+            {servicio.service_city && (
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                <p className="text-gray-700 truncate">{servicio.service_city}</p>
               </div>
             )}
-
-            {servicio.installation_details && (
-              <div className="border-t border-gray-200 pt-3">
-                <div className="flex items-start gap-2 text-sm">
-                  <FileText className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <span className="text-gray-500 block">Detalles de instalación:</span>
-                    <div className="font-medium text-gray-900">{servicio.installation_details}</div>
-                  </div>
-                </div>
+            {servicio.device_esn && (
+              <div>
+                <span className="text-gray-400 text-xs">ESN</span>
+                <p className="font-mono text-gray-700 text-xs">{servicio.device_esn}</p>
               </div>
             )}
           </div>
+        </div>
+
+        <div className="flex-shrink-0">
+          {esEnCurso && (
+            <button
+              onClick={() => onSeleccionar(servicio)}
+              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              Reanudar
+            </button>
+          )}
+          {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
+            <button
+              onClick={handleIniciarServicio}
+              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              Iniciar
+            </button>
+          )}
         </div>
       </div>
 
       {estado.estado === 'bloqueado' && (
-        <div className="mt-3 pt-3 border-t border-gray-300">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Lock className="w-4 h-4" />
-            <span>Este servicio solo puede iniciarse el día programado</span>
-          </div>
-        </div>
-      )}
-
-      {esEnCurso && (
-        <div className="mt-3 pt-3 border-t border-blue-300">
-          <button
-            onClick={() => onSeleccionar(servicio)}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-          >
-            <Clock className="w-5 h-5" />
-            Reanudar servicio
-          </button>
-        </div>
-      )}
-
-      {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
-        <div className="mt-3 pt-3 border-t border-gray-300">
-          <button
-            onClick={handleIniciarServicio}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-          >
-            <ClipboardList className="w-5 h-5" />
-            Iniciar servicio
-          </button>
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <p className="text-xs text-gray-500">
+            Este servicio solo puede iniciarse el día programado
+          </p>
         </div>
       )}
     </div>
