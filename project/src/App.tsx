@@ -991,68 +991,7 @@ function TechnicianApp() {
               ) : null}
 
               {state.esn && !servicioFinalizado && !mostrarFormularioCierre && (
-                <>
-                  {pruebasCompletadas && (
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-300 p-6 mb-6 shadow-lg">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                          <CheckCircle2 className="w-7 h-7 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-green-800">Pruebas Completadas</h3>
-                          <p className="text-green-700 text-sm">Todas las pruebas técnicas fueron ejecutadas exitosamente</p>
-                        </div>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 mb-4 border border-green-200">
-                        <p className="text-gray-700 text-sm mb-2">
-                          <strong>Estado:</strong> Listo para continuar al formulario de cierre
-                        </p>
-                        <p className="text-gray-600 text-xs">
-                          Confirme que las pruebas están correctas para avanzar a la siguiente etapa del servicio.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          agregarLogConsola('✅ Técnico confirmó pruebas - avanzando a formulario de cierre');
-                          setMostrarFormularioCierre(true);
-                        }}
-                        className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg shadow-md transition-all duration-200 flex items-center justify-center gap-3"
-                      >
-                        <CheckCircle2 className="w-6 h-6" />
-                        Confirmar Pruebas y Continuar
-                      </button>
-                    </div>
-                  )}
-
-                  <PruebasActivas
-                    esn={state.esn}
-                    expedienteId={generarExpedienteId(
-                      state.expediente_actual?.work_order_name || null,
-                      state.expediente_actual?.appointment_name || null
-                    )}
-                    pruebasRequeridas={traducirPruebasDesdeInstallationDetails(
-                      state.expediente_actual?.installation_details || ''
-                    )}
-                    bloqueoExitoso={state.bloqueo_exitoso}
-                    desbloqueoExitoso={state.desbloqueo_exitoso}
-                    buzzerExitoso={state.buzzer_exitoso}
-                    buzzerOffExitoso={state.buzzer_off_exitoso}
-                    onSetBloqueoExitoso={(val) =>
-                      dispatch({ type: 'SET_BLOQUEO_EXITOSO', payload: val })
-                    }
-                    onSetDesbloqueoExitoso={(val) =>
-                      dispatch({ type: 'SET_DESBLOQUEO_EXITOSO', payload: val })
-                    }
-                    onSetBuzzerExitoso={(val) =>
-                      dispatch({ type: 'SET_BUZZER_EXITOSO', payload: val })
-                    }
-                    onSetBuzzerOffExitoso={(val) =>
-                      dispatch({ type: 'SET_BUZZER_OFF_EXITOSO', payload: val })
-                    }
-                    onErrorPanel={setErrorPanel}
-                    onLogConsola={agregarLogConsola}
-                  />
-
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                   <PruebasPasivas
                     esn={state.esn}
                     expedienteId={generarExpedienteId(
@@ -1086,7 +1025,60 @@ function TechnicianApp() {
                     onErrorPanel={setErrorPanel}
                     onLogConsola={agregarLogConsola}
                   />
-                </>
+
+                  <PruebasActivas
+                    esn={state.esn}
+                    expedienteId={generarExpedienteId(
+                      state.expediente_actual?.work_order_name || null,
+                      state.expediente_actual?.appointment_name || null
+                    )}
+                    pruebasRequeridas={traducirPruebasDesdeInstallationDetails(
+                      state.expediente_actual?.installation_details || ''
+                    )}
+                    bloqueoExitoso={state.bloqueo_exitoso}
+                    desbloqueoExitoso={state.desbloqueo_exitoso}
+                    buzzerExitoso={state.buzzer_exitoso}
+                    buzzerOffExitoso={state.buzzer_off_exitoso}
+                    onSetBloqueoExitoso={(val) =>
+                      dispatch({ type: 'SET_BLOQUEO_EXITOSO', payload: val })
+                    }
+                    onSetDesbloqueoExitoso={(val) =>
+                      dispatch({ type: 'SET_DESBLOQUEO_EXITOSO', payload: val })
+                    }
+                    onSetBuzzerExitoso={(val) =>
+                      dispatch({ type: 'SET_BUZZER_EXITOSO', payload: val })
+                    }
+                    onSetBuzzerOffExitoso={(val) =>
+                      dispatch({ type: 'SET_BUZZER_OFF_EXITOSO', payload: val })
+                    }
+                    onErrorPanel={setErrorPanel}
+                    onLogConsola={agregarLogConsola}
+                  />
+
+                  {pruebasCompletadas && (
+                    <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-t border-green-200">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                          <CheckCircle2 className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-green-800">Pruebas Completadas</h3>
+                          <p className="text-green-700 text-sm">Todas las pruebas fueron ejecutadas exitosamente</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          agregarLogConsola('✅ Técnico confirmó pruebas - avanzando a formulario de cierre');
+                          setMostrarFormularioCierre(true);
+                        }}
+                        className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg shadow-md transition-all duration-200 flex items-center justify-center gap-3"
+                      >
+                        <CheckCircle2 className="w-6 h-6" />
+                        Confirmar Pruebas y Continuar
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
 
               {mostrarFormularioCierre && !servicioFinalizado && state.expediente_actual && (

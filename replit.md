@@ -88,6 +88,25 @@ project/
 - El servicio solo puede iniciarse desde el botón dedicado (no clic en tarjeta)
 - El servicio solo puede iniciarse el día programado
 
+## Diseño de UI/UX (Actualizado)
+
+### Flujo de Pruebas
+- Pantalla unificada con flujo lineal de arriba hacia abajo
+- Orden: Resumen del servicio → ESN/Dispositivo → Pruebas Pasivas → Pruebas Activas → Botón "Confirmar y Continuar"
+- El botón de confirmación aparece SOLO al final después de todas las pruebas
+- Sin etiquetas "Paso 1" / "Paso 2" visibles al técnico (solo interno)
+
+### Acciones de Reinicio
+- **Cambiar Dispositivo**: Resetea SOLO las pruebas, mantiene datos del vehículo
+- **Reiniciar Servicio**: Vuelve al estado inicial completo (nuevo servicio)
+
+### Dashboard/Calendario
+- Servicios muestran indicador de estado (EN CURSO, PENDIENTE, COMPLETADO, BLOQUEADO)
+- Servicios en progreso muestran botón "Reanudar" 
+- Servicios pendientes del día muestran botón "Iniciar servicio"
+- Sin distinción visual de "servicio seleccionado"
+- Permite manejar múltiples servicios simultáneamente
+
 ## API de Exportación de Datos
 La aplicación incluye una API REST para exportar datos de las tablas de Supabase en tiempo real.
 

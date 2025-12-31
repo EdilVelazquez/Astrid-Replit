@@ -256,7 +256,7 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Paso 2: Cierre de Servicio</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Cierre de Servicio</h2>
           <p className="text-sm text-gray-600">
             Completa la documentación final de la instalación
           </p>

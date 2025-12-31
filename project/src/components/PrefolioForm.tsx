@@ -694,7 +694,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Paso 1: Inicio de Servicio</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Inicio de Servicio</h2>
           <p className="text-sm text-gray-600">
             Completa la información del vehículo y equipo para iniciar las pruebas
           </p>

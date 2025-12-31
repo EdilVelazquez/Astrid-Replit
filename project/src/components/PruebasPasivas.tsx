@@ -163,9 +163,9 @@ export function PruebasPasivas({
     (!requiereUbicacion || ubicacionExitosa);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="p-6 border-b border-gray-200">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-gray-800">Validación del dispositivo instalado</h3>
+        <h3 className="text-base font-semibold text-gray-800">Pruebas de Validación</h3>
         <div className="flex items-center gap-2">
           {intentosRealizados > 0 && (
             <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full border border-gray-300">

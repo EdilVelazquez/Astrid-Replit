@@ -46,10 +46,6 @@ export default function CalendarioTecnico({
     return formatearFechaLocal(fecha) > formatearFechaLocal(hoy);
   };
 
-  const _esPasado = (fecha: Date): boolean => {
-    const hoy = new Date();
-    return formatearFechaLocal(fecha) < formatearFechaLocal(hoy);
-  };
 
   const obtenerEstadoServicio = (servicio: ExpedienteServicio): EstadoServicio => {
     const fechaServicio = servicio.scheduled_start_time
@@ -286,7 +282,6 @@ export default function CalendarioTecnico({
                       servicio={servicio}
                       estado={obtenerEstadoServicio(servicio)}
                       puedeIniciar={puedeIniciarServicio(servicio)}
-                      esActual={servicioActual?.id === servicio.id}
                       onSeleccionar={onSeleccionarServicio}
                       formatearHora={formatearHora}
                     />
@@ -538,14 +533,12 @@ function TarjetaServicio({
   servicio,
   estado,
   puedeIniciar,
-  esActual,
   onSeleccionar,
   formatearHora
 }: {
   servicio: ExpedienteServicio;
   estado: EstadoServicio;
   puedeIniciar: boolean;
-  esActual: boolean;
   onSeleccionar: (servicio: ExpedienteServicio) => void;
   formatearHora: (fecha: string) => string;
 }) {
@@ -571,11 +564,11 @@ function TarjetaServicio({
     }
   };
 
+  const esEnCurso = estado.estado === 'en_curso';
+
   return (
     <div
-      className={`border-2 rounded-lg p-4 transition-all ${estado.color} ${getBorderColor()} ${
-        esActual ? 'ring-4 ring-blue-400' : ''
-      }`}
+      className={`border-2 rounded-lg p-4 transition-all ${estado.color} ${getBorderColor()}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
@@ -721,7 +714,19 @@ function TarjetaServicio({
         </div>
       )}
 
-      {puedeIniciar && !esActual && (
+      {esEnCurso && (
+        <div className="mt-3 pt-3 border-t border-blue-300">
+          <button
+            onClick={() => onSeleccionar(servicio)}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <Clock className="w-5 h-5" />
+            Reanudar servicio
+          </button>
+        </div>
+      )}
+
+      {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
         <div className="mt-3 pt-3 border-t border-gray-300">
           <button
             onClick={handleIniciarServicio}
@@ -730,15 +735,6 @@ function TarjetaServicio({
             <ClipboardList className="w-5 h-5" />
             Iniciar servicio
           </button>
-        </div>
-      )}
-
-      {esActual && (
-        <div className="mt-3 pt-3 border-t border-blue-300">
-          <div className="flex items-center gap-2 text-blue-700 font-medium">
-            <CheckCircle2 className="w-5 h-5" />
-            <span>Servicio actualmente seleccionado</span>
-          </div>
         </div>
       )}
     </div>
@@ -772,7 +768,7 @@ function ListaCompactaServicios({
           servicios.map(servicio => {
             const estado = obtenerEstadoServicio(servicio);
             const puedeIniciar = puedeIniciarServicio(servicio);
-            const esActual = servicioActual?.id === servicio.id;
+            const esEnCurso = estado.estado === 'en_curso';
 
             const handleIniciar = () => {
               if (!puedeIniciar) return;
@@ -788,8 +784,6 @@ function ListaCompactaServicios({
               <div
                 key={servicio.id}
                 className={`p-3 rounded-lg border-2 transition-all ${
-                  esActual ? 'ring-2 ring-blue-400 border-blue-400' : ''
-                } ${
                   estado.estado === 'completado' ? 'bg-green-50 border-green-300' :
                   estado.estado === 'en_curso' ? 'bg-blue-50 border-blue-300' :
                   estado.estado === 'pendiente' ? 'bg-yellow-50 border-yellow-300' :
@@ -829,19 +823,21 @@ function ListaCompactaServicios({
                         <span>{servicio.service_city}</span>
                       </div>
                     )}
-                    {puedeIniciar && !esActual && (
+                    {esEnCurso && (
+                      <button
+                        onClick={() => onSeleccionar(servicio)}
+                        className="mt-2 w-full text-xs bg-blue-600 text-white py-1.5 px-2 rounded font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        Reanudar
+                      </button>
+                    )}
+                    {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
                       <button
                         onClick={handleIniciar}
                         className="mt-2 w-full text-xs bg-blue-600 text-white py-1.5 px-2 rounded font-medium hover:bg-blue-700 transition-colors"
                       >
                         Iniciar
                       </button>
-                    )}
-                    {esActual && (
-                      <div className="mt-2 text-xs text-blue-600 font-medium flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Seleccionado
-                      </div>
                     )}
                   </div>
                 </div>
