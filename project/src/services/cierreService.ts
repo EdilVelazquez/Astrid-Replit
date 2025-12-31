@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient';
 
-const STORAGE_BUCKET = 'cierre-photos';
+const STORAGE_BUCKET = 'prefolio-photos';
 
 export interface CierreDatos {
   tipo_corte: string;
