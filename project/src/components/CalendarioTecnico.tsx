@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ExpedienteServicio } from '../types';
-import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2 } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2, Car, Wrench, User } from 'lucide-react';
 
 function formatearFechaLocal(fecha: Date): string {
   const year = fecha.getFullYear();
@@ -276,84 +276,82 @@ export default function CalendarioTecnico({
 
     if (modoVisualizacion === 'lista') {
       return (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hora</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">AP / Folio</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cliente</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {serviciosOrdenados.map(servicio => {
-                const estado = obtenerEstadoServicio(servicio);
-                const puedeIniciar = puedeIniciarServicio(servicio);
-                const esEnCurso = estado.estado === 'en_curso';
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="divide-y divide-gray-100">
+            {serviciosOrdenados.map(servicio => {
+              const estado = obtenerEstadoServicio(servicio);
+              const puedeIniciar = puedeIniciarServicio(servicio);
+              const esEnCurso = estado.estado === 'en_curso';
 
-                const handleIniciar = () => {
-                  if (!puedeIniciar) return;
-                  const confirmacion = confirm(
-                    `¿Iniciar servicio?\n\nCita: ${servicio.appointment_name || 'Sin número'}\nCliente: ${servicio.client_name || 'No especificado'}`
-                  );
-                  if (confirmacion) {
-                    onSeleccionarServicio(servicio);
-                  }
-                };
-
-                const getEstadoBadge = () => {
-                  if (estado.estado === 'completado') {
-                    return <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Completado</span>;
-                  }
-                  if (estado.estado === 'en_curso') {
-                    return <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">En Curso</span>;
-                  }
-                  if (estado.estado === 'pendiente') {
-                    return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">Pendiente</span>;
-                  }
-                  return <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Bloqueado</span>;
-                };
-
-                return (
-                  <tr key={servicio.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {servicio.scheduled_start_time ? formatearHora(servicio.scheduled_start_time) : '--:--'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm font-semibold text-gray-900">{servicio.appointment_name || 'Sin AP'}</div>
-                      <div className="text-xs text-gray-500">{servicio.work_order_name || ''}</div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {servicio.client_name || 'No especificado'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {getEstadoBadge()}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {esEnCurso && (
-                        <button
-                          onClick={() => onSeleccionarServicio(servicio)}
-                          className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Reanudar
-                        </button>
-                      )}
-                      {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
-                        <button
-                          onClick={handleIniciar}
-                          className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Iniciar
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+              const handleIniciar = () => {
+                if (!puedeIniciar) return;
+                const confirmacion = confirm(
+                  `¿Iniciar servicio?\n\nCita: ${servicio.appointment_name || 'Sin número'}\nCliente: ${servicio.client_name || 'No especificado'}`
                 );
-              })}
-            </tbody>
-          </table>
+                if (confirmacion) {
+                  onSeleccionarServicio(servicio);
+                }
+              };
+
+              const getEstadoIndicator = () => {
+                if (estado.estado === 'completado') return 'bg-gray-400';
+                if (estado.estado === 'en_curso') return 'bg-gray-900';
+                if (estado.estado === 'pendiente') return 'bg-gray-300';
+                return 'bg-gray-200';
+              };
+
+              return (
+                <div 
+                  key={servicio.id} 
+                  className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className={`w-1.5 h-8 rounded-full ${getEstadoIndicator()}`} />
+                  
+                  <div className="w-14 text-sm font-medium text-gray-900">
+                    {servicio.scheduled_start_time ? formatearHora(servicio.scheduled_start_time) : '--:--'}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-gray-900 truncate block">
+                      {servicio.appointment_name || 'Sin AP'}
+                    </span>
+                  </div>
+
+                  <div className="w-40 text-sm text-gray-600 truncate hidden sm:block">
+                    {servicio.client_name || '-'}
+                  </div>
+
+                  <div className="w-24 text-right flex items-center justify-end gap-2">
+                    {esEnCurso ? (
+                      <button
+                        onClick={() => onSeleccionarServicio(servicio)}
+                        className="px-3 py-1 bg-gray-900 text-white text-xs font-medium rounded-md hover:bg-gray-800 transition-colors"
+                      >
+                        Reanudar
+                      </button>
+                    ) : puedeIniciar && estado.estado === 'pendiente' ? (
+                      <button
+                        onClick={handleIniciar}
+                        className="px-3 py-1 bg-gray-900 text-white text-xs font-medium rounded-md hover:bg-gray-800 transition-colors"
+                      >
+                        Iniciar
+                      </button>
+                    ) : (
+                      <span className={`text-xs px-2 py-0.5 rounded-md ${
+                        estado.estado === 'completado' ? 'bg-gray-100 text-gray-500' :
+                        estado.estado === 'pendiente' ? 'bg-gray-100 text-gray-600' :
+                        'bg-gray-100 text-gray-400'
+                      }`}>
+                        {estado.estado === 'completado' ? 'Completado' :
+                         estado.estado === 'pendiente' ? 'Pendiente' :
+                         'Futuro'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       );
     }
@@ -476,64 +474,29 @@ export default function CalendarioTecnico({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {[
-          { key: 'total', label: 'Total', value: resumen.total },
-          { key: 'pendientes', label: 'Pendientes', value: resumen.pendientes },
-          { key: 'en_curso', label: 'En curso', value: resumen.enCurso },
-          { key: 'completados', label: 'Completados', value: resumen.completados },
-          { key: 'futuros', label: 'Futuros', value: resumen.bloqueados }
-        ].map(item => {
-          const isActive = 
-            (item.key === 'total' && filtroEstado === 'todos') ||
-            (item.key === 'pendientes' && filtroEstado === 'pendiente') ||
-            (item.key === 'en_curso' && filtroEstado === 'en_curso') ||
-            (item.key === 'completados' && filtroEstado === 'completado');
-          
-          const handleClick = () => {
-            if (item.key === 'total') setFiltroEstado('todos');
-            else if (item.key === 'pendientes') setFiltroEstado('pendiente');
-            else if (item.key === 'en_curso') setFiltroEstado('en_curso');
-            else if (item.key === 'completados') setFiltroEstado('completado');
-          };
-
-          return (
-            <button
-              key={item.key}
-              onClick={handleClick}
-              className={`
-                flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all
-                ${isActive 
-                  ? 'bg-white border-gray-300 shadow-sm' 
-                  : 'bg-gray-50 border-transparent hover:bg-gray-100'
-                }
-              `}
-            >
-              <span className="text-lg font-semibold text-gray-800">{item.value}</span>
-              <span className="text-sm text-gray-500">{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex bg-gray-100 rounded-lg p-0.5">
           {[
-            { key: 'todos', label: 'Todos' },
-            { key: 'pendiente', label: 'Pendientes' },
-            { key: 'en_curso', label: 'En curso' },
-            { key: 'completado', label: 'Completados' }
+            { key: 'todos', label: 'Todos', count: resumen.total },
+            { key: 'pendiente', label: 'Pendientes', count: resumen.pendientes },
+            { key: 'en_curso', label: 'En curso', count: resumen.enCurso },
+            { key: 'completado', label: 'Completados', count: resumen.completados }
           ].map(f => (
             <button
               key={f.key}
               onClick={() => setFiltroEstado(f.key as FiltroEstado)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                 filtroEstado === f.key
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              {f.label}
+              <span>{f.label}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                filtroEstado === f.key ? 'bg-gray-100 text-gray-700' : 'bg-gray-200/50 text-gray-500'
+              }`}>
+                {f.count}
+              </span>
             </button>
           ))}
         </div>
@@ -546,7 +509,7 @@ export default function CalendarioTecnico({
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
-            title="Vista lista"
+            title="Vista compacta"
           >
             <List className="w-4 h-4" />
           </button>
@@ -557,7 +520,7 @@ export default function CalendarioTecnico({
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
-            title="Vista tarjeta"
+            title="Vista detallada"
           >
             <LayoutGrid className="w-4 h-4" />
           </button>
@@ -601,100 +564,179 @@ function TarjetaServicio({
 
   const esEnCurso = estado.estado === 'en_curso';
 
-  const getStatusBadge = () => {
-    const baseClass = "px-2 py-0.5 text-xs font-medium rounded-full";
-    if (estado.estado === 'completado') return <span className={`${baseClass} bg-gray-100 text-gray-600`}>Completado</span>;
-    if (estado.estado === 'en_curso') return <span className={`${baseClass} bg-gray-800 text-white`}>En curso</span>;
-    if (estado.estado === 'pendiente') return <span className={`${baseClass} bg-gray-100 text-gray-600`}>Pendiente</span>;
-    return <span className={`${baseClass} bg-gray-100 text-gray-500`}>Futuro</span>;
+  const getStatusIndicator = () => {
+    if (estado.estado === 'completado') return { color: 'bg-gray-400', label: 'Completado' };
+    if (estado.estado === 'en_curso') return { color: 'bg-gray-900', label: 'En curso' };
+    if (estado.estado === 'pendiente') return { color: 'bg-gray-300', label: 'Pendiente' };
+    return { color: 'bg-gray-200', label: 'Futuro' };
   };
 
+  const statusInfo = getStatusIndicator();
+
+  const formatearFechaCompleta = (fechaISO: string) => {
+    const fecha = new Date(fechaISO);
+    return fecha.toLocaleDateString('es-MX', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const vehiculoDisplay = servicio.asset_marca && servicio.asset_submarca 
+    ? `${servicio.asset_marca} ${servicio.asset_submarca}` 
+    : servicio.asset_name || 'No especificado';
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-gray-900 truncate">
-              {servicio.appointment_name || 'Sin número de cita'}
-            </span>
-            {servicio.scheduled_start_time && (
-              <span className="text-sm text-gray-500 flex-shrink-0">
-                {formatearHora(servicio.scheduled_start_time)}
-              </span>
-            )}
-            {getStatusBadge()}
-            {servicio.is_test_service && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-purple-50 text-purple-700 rounded-full">
-                Test
-              </span>
-            )}
-          </div>
-          
-          <p className="text-sm text-gray-600 mb-3">
-            {servicio.client_name || 'Cliente no especificado'}
-          </p>
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-gray-300 transition-all">
+      <div className="flex">
+        <div className={`w-1 ${statusInfo.color}`} />
+        
+        <div className="flex-1 p-4">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-base font-semibold text-gray-900 truncate">
+                  {servicio.appointment_name || 'Sin número de cita'}
+                </h3>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-md ${
+                  estado.estado === 'en_curso' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {statusInfo.label}
+                </span>
+                {servicio.is_test_service && (
+                  <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-500 rounded-md">
+                    Test
+                  </span>
+                )}
+              </div>
+              
+              {servicio.work_order_name && (
+                <p className="text-xs text-gray-400 font-mono">
+                  WO: {servicio.work_order_name}
+                </p>
+              )}
+            </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-            {servicio.asset_name && (
-              <div>
-                <span className="text-gray-400 text-xs">Vehículo</span>
-                <p className="text-gray-700 truncate">{servicio.asset_name}</p>
+            <div className="flex-shrink-0">
+              {esEnCurso && (
+                <button
+                  onClick={() => onSeleccionar(servicio)}
+                  className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Reanudar
+                </button>
+              )}
+              {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
+                <button
+                  onClick={handleIniciarServicio}
+                  className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Iniciar servicio
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="flex items-start gap-2">
+              <Clock className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 mb-0.5">Fecha y hora</p>
+                <p className="text-sm text-gray-700">
+                  {servicio.scheduled_start_time 
+                    ? formatearFechaCompleta(servicio.scheduled_start_time) 
+                    : 'No programado'}
+                </p>
               </div>
-            )}
-            {servicio.service_type && (
-              <div>
-                <span className="text-gray-400 text-xs">Tipo</span>
-                <p className="text-gray-700 truncate">{servicio.service_type}</p>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <User className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 mb-0.5">Cliente</p>
+                <p className="text-sm text-gray-700 truncate">
+                  {servicio.client_name || 'No especificado'}
+                </p>
               </div>
-            )}
-            {servicio.company_name && (
-              <div>
-                <span className="text-gray-400 text-xs">Empresa</span>
-                <p className="text-gray-700 truncate">{servicio.company_name}</p>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Car className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 mb-0.5">Vehículo</p>
+                <p className="text-sm text-gray-700 truncate">{vehiculoDisplay}</p>
+                {servicio.asset_placas && (
+                  <p className="text-xs text-gray-500 font-mono">{servicio.asset_placas}</p>
+                )}
               </div>
-            )}
-            {servicio.service_city && (
-              <div className="flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                <p className="text-gray-700 truncate">{servicio.service_city}</p>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Wrench className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 mb-0.5">Tipo de servicio</p>
+                <p className="text-sm text-gray-700 truncate">
+                  {servicio.service_type || 'Instalación'}
+                </p>
               </div>
-            )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3 pt-3 border-t border-gray-100">
+            <div className="flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 mb-0.5">Ubicación</p>
+                <p className="text-sm text-gray-700 truncate">
+                  {servicio.service_city || 'No especificada'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Building2 className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 mb-0.5">Empresa</p>
+                <p className="text-sm text-gray-700 truncate">
+                  {servicio.company_name || 'No especificada'}
+                </p>
+              </div>
+            </div>
+
             {servicio.device_esn && (
-              <div>
-                <span className="text-gray-400 text-xs">ESN</span>
-                <p className="font-mono text-gray-700 text-xs">{servicio.device_esn}</p>
+              <div className="flex items-start gap-2">
+                <div className="w-4 h-4 flex items-center justify-center text-gray-400 mt-0.5 flex-shrink-0">
+                  <span className="text-xs font-mono">#</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-400 mb-0.5">ESN</p>
+                  <p className="text-sm text-gray-700 font-mono truncate">{servicio.device_esn}</p>
+                </div>
+              </div>
+            )}
+
+            {servicio.prefolio_realizado && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-md">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-xs text-gray-600">Prefolio</span>
+                </div>
               </div>
             )}
           </div>
-        </div>
 
-        <div className="flex-shrink-0">
-          {esEnCurso && (
-            <button
-              onClick={() => onSeleccionar(servicio)}
-              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
-            >
-              Reanudar
-            </button>
-          )}
-          {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
-            <button
-              onClick={handleIniciarServicio}
-              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
-            >
-              Iniciar
-            </button>
+          {estado.estado === 'bloqueado' && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5" />
+                Este servicio solo puede iniciarse el día programado
+              </p>
+            </div>
           )}
         </div>
       </div>
-
-      {estado.estado === 'bloqueado' && (
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <p className="text-xs text-gray-500">
-            Este servicio solo puede iniciarse el día programado
-          </p>
-        </div>
-      )}
     </div>
   );
 }
