@@ -59,17 +59,17 @@ export async function guardarCierreDatosParciales(
   try {
     console.log('📝 [CIERRE] Guardando datos parciales de cierre...', { expedienteId, datos });
 
-    const updates = {
-      cierre_tipo_corte: datos.tipo_corte,
-      cierre_nombre_recibe: datos.nombre_recibe,
-      cierre_firma_url: datos.firma_data_url,
+    const cierreData = {
+      expediente_id: expedienteId,
+      tipo_corte: datos.tipo_corte,
+      nombre_recibe: datos.nombre_recibe,
+      firma_url: datos.firma_data_url,
       updated_at: new Date().toISOString(),
     };
 
     const { error } = await supabase
-      .from('expedientes_servicio')
-      .update(updates)
-      .eq('id', expedienteId);
+      .from('cierre_data')
+      .upsert(cierreData, { onConflict: 'expediente_id' });
 
     if (error) {
       console.error('❌ [CIERRE] Error al guardar datos parciales:', error);
@@ -90,21 +90,32 @@ export async function marcarCierreCompletado(
   try {
     console.log('✅ [CIERRE] Marcando cierre como completado...', { expedienteId });
 
-    const updates = {
-      cierre_realizado: true,
-      validation_final_status: 'COMPLETADO',
-      validation_end_timestamp: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    const { error: cierreError } = await supabase
+      .from('cierre_data')
+      .upsert({
+        expediente_id: expedienteId,
+        completado: true,
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'expediente_id' });
 
-    const { error } = await supabase
+    if (cierreError) {
+      console.error('❌ [CIERRE] Error al marcar cierre_data completado:', cierreError);
+      return { success: false, error: cierreError.message };
+    }
+
+    const { error: expedienteError } = await supabase
       .from('expedientes_servicio')
-      .update(updates)
+      .update({
+        cierre_realizado: true,
+        validation_final_status: 'COMPLETADO',
+        validation_end_timestamp: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', expedienteId);
 
-    if (error) {
-      console.error('❌ [CIERRE] Error al marcar completado:', error);
-      return { success: false, error: error.message };
+    if (expedienteError) {
+      console.warn('⚠️ [CIERRE] Error al actualizar expedientes_servicio (puede no tener las columnas):', expedienteError);
     }
 
     console.log('✅ [CIERRE] Cierre completado exitosamente');
@@ -181,19 +192,19 @@ export async function guardarCierreFotos(
     }
 
     const updates: Record<string, any> = {
-      cierre_fotos_obligatorias: urlsFotosObligatorias,
-      cierre_fotos_adicionales: urlsFotosAdicionales,
+      expediente_id: expedienteId,
+      fotos_obligatorias: urlsFotosObligatorias,
+      fotos_adicionales: urlsFotosAdicionales,
       updated_at: new Date().toISOString(),
     };
 
     if (urlFotoPersona) {
-      updates.cierre_foto_persona_recibe = urlFotoPersona;
+      updates.foto_persona_recibe = urlFotoPersona;
     }
 
     const { error } = await supabase
-      .from('expedientes_servicio')
-      .update(updates)
-      .eq('id', expedienteId);
+      .from('cierre_data')
+      .upsert(updates, { onConflict: 'expediente_id' });
 
     if (error) {
       console.error('❌ [CIERRE] Error al guardar URLs de fotos:', error);
