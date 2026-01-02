@@ -1,4 +1,4 @@
-modules = ["nodejs-20"]
+modules = ["nodejs-20", "postgresql-16"]
 [nix]
 channel = "stable-25_05"
 packages = ["unzip"]
@@ -16,19 +16,19 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend"
+args = "App"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Metrics API"
 
 [[workflows.workflow]]
-name = "Frontend"
+name = "App"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd project && npm run dev"
+args = "cd project && npm run build && node server.js"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -53,14 +53,6 @@ externalPort = 3001
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
-
-[[ports]]
-localPort = 5002
-externalPort = 3001
 
 [userenv]
 

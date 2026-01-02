@@ -1,0 +1,142 @@
+Necesito actualizar el flujo completo del servicio, específicamente el formulario de cierre, las reglas de envío de webhooks, y el comportamiento de inicio / finalización del servicio, respetando toda la lógica ya definida anteriormente y sin agregar procesos ajenos.
+
+SECCIÓN 1 – FORMULARIO DE CIERRE (nuevo contenido)
+
+Al llegar a la fase de Formulario de Cierre, deben mostrarse únicamente los siguientes campos y validaciones:
+
+1. Campos obligatorios de cierre
+
+1. ¿Cómo queda el corte?
+Opciones (radio / select):
+
+Ignición
+
+Bomba
+
+Marcha
+
+2. Evidencias fotográficas obligatorias
+
+Foto(s) de cómo y dónde quedó instalado el equipo
+
+Foto de dónde está conectada la corriente
+
+Foto de dónde está conectada la tierra
+
+Foto de dónde está conectada ignición
+
+Foto de dónde está conectada ignición y corte
+
+Foto del botón de pánico
+
+3. Fotos adicionales personalizadas
+
+El técnico puede agregar hasta 5 bloques adicionales de fotos personalizadas.
+
+Cada bloque debe permitir:
+
+Ingresar un nombre o descripción (ej. “Foto solicitada por cliente”).
+
+Subir hasta 5 fotos por bloque.
+
+Estos campos se agregan dinámicamente mediante botón “Agregar foto”.
+
+4. Firma de recepción del vehículo
+
+Al final del formulario:
+
+Campo: Nombre de quien recibe el vehículo
+
+Campo: Firma digital (dibujada en pantalla)
+
+Campo: Foto de la persona que recibe el vehículo
+
+La foto debe tomarse en el momento (no subir desde galería).
+
+Este bloque es obligatorio para finalizar el servicio.
+
+SECCIÓN 2 – Reglas de actualización del vehículo (webhooks)
+Cambios de VIN
+
+Si el VIN escaneado es distinto al VIN original del servicio:
+
+Se debe disparar un webhook con todos los datos del vehículo.
+
+El webhook debe indicar acción:
+action = CreateAsset
+
+Este webhook se ejecuta una sola vez, cuando se confirma el cambio (no en cada edición).
+
+Cambios en otros datos del vehículo
+
+Si se modifica cualquier otro campo del vehículo (color, placas, etc.):
+
+Enviar webhook con:
+action = EditAsset
+
+El envío debe realizarse al continuar con el flujo, no en tiempo real por cada campo.
+
+(Por ahora se puede usar el mismo endpoint, diferenciando la acción por parámetro.)
+
+SECCIÓN 3 – Flujo de inicio y finalización del servicio
+Inicio del servicio
+
+El servicio solo puede iniciarse desde el botón “Iniciar servicio” en el calendario.
+
+Al iniciar:
+
+Se muestra confirmación.
+
+Se dispara webhook:
+
+action = StartWork
+
+No se debe iniciar el servicio tocando cualquier parte del card.
+
+Finalización del servicio
+
+Cuando se completa el formulario de cierre:
+
+Se dispara el webhook:
+
+action = CompleteWork
+
+El servicio cambia a estado COMPLETADO.
+
+Se bloquea toda edición posterior.
+
+SECCIÓN 4 – Diseño y experiencia
+
+El flujo debe verse como un solo proceso continuo, claramente dividido en:
+
+Paso 1: Inicio de servicio + pruebas
+
+Paso 2: Cierre de servicio
+
+No deben parecer pantallas desconectadas.
+
+El diseño debe ser:
+
+100% responsivo
+
+Claro
+
+Guiado
+
+El técnico debe sentir que:
+
+Inicia un servicio
+
+Ejecuta pruebas
+
+Finaliza correctamente el servicio
+
+SECCIÓN 5 – Comportamiento general
+
+No se deben ejecutar webhooks innecesarios.
+
+No se debe permitir avanzar sin cumplir requisitos.
+
+Los estados deben ser coherentes en todo momento.
+
+El flujo debe ser totalmente controlado, predecible y auditable.

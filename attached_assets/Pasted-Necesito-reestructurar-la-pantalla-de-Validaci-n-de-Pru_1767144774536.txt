@@ -1,0 +1,81 @@
+Necesito reestructurar la pantalla de Validación de Pruebas Técnicas para que se vea y funcione como un flujo lineal paso a paso, porque actualmente está “revuelta” y parece separada en módulos sin un orden claro (como se aprecia en la imagen: “Información del servicio registrada”, “ESN del dispositivo”, el bloque verde “Pruebas Completadas” con el botón “Confirmar Pruebas y Continuar” en medio, y debajo los bloques de “Pruebas de funcionalidad…” y “Validación del dispositivo…”).
+
+1) Orden y diseño del flujo en Pruebas
+
+Reordena la pantalla para que el contenido siga un orden lógico de arriba hacia abajo, sin que el botón de avance quede a la mitad.
+
+El botón “Confirmar Pruebas y Continuar” debe ir hasta el final de la sección de pruebas, como cierre natural del paso, no antes de mostrar el detalle de lo que se validó.
+
+Los apartados deben verse como un solo camino continuo (no “módulos separados”), con jerarquía visual clara:
+
+Primero el contexto del servicio (resumen),
+
+luego el dispositivo (ESN y cambio de dispositivo),
+
+luego las pruebas (pasivas y activas, según aplique),
+
+y al final el cierre/confirmación para avanzar.
+
+2) Comportamiento de reinicios en esta etapa
+
+En esta pantalla existen dos acciones: Cambiar Dispositivo y Reiniciar (servicio). Deben tener efectos coherentes y “limpios” visualmente, sin dejar resultados anteriores en pantalla.
+
+2.1 Cambiar dispositivo
+
+Si el técnico usa Cambiar Dispositivo:
+
+Debe reiniciarse únicamente el bloque de pruebas (todas).
+
+Se deben borrar y dejar de mostrar los resultados previos (como si nunca se hubieran ejecutado).
+
+Debe regresar al punto donde el técnico debe realizar nuevamente las pruebas del nuevo dispositivo.
+
+No debe conservarse el estado “Pruebas Completadas” ni permitir continuar hasta que se completen otra vez.
+
+2.2 Reiniciar servicio
+
+Si el técnico usa Reiniciar (servicio):
+
+Debe reiniciar el flujo completo del servicio a 0.
+
+Debe regresar al módulo inicial donde se captura la información (como si fuera la primera vez).
+
+Se deben borrar datos y estados de:
+
+información registrada,
+
+ESN,
+
+pruebas,
+
+y cualquier avance.
+
+3) Dashboard / lista de servicios en agenda (con servicios simultáneos)
+
+Necesito que en el dashboard donde aparecen mis servicios:
+
+No me muestres el servicio “seleccionado actualmente” como un estado especial visual (no marcarlo como “seleccionado”).
+
+Sí necesito que cada servicio pueda reflejar si está:
+
+iniciado y en qué estado/etapa general se encuentra (sin usar nombres de pasos visibles).
+
+Esto debe ser un indicador de estado para que pueda manejar 2 o más servicios simultáneamente.
+
+Debe permitirme volver a entrar a un servicio que está en proceso (reanudar), pero:
+
+No “iniciar” de nuevo.
+
+Solo reanudar aquellos que ya avanzaron y tienen un estado guardado válido.
+
+Si un servicio se quedó a medias y no se guardó correctamente, entonces:
+
+Se debe reiniciar o no considerarse como “en proceso” (no debe permitir reanudar un estado inconsistente).
+
+4) Nota de implementación (no visible al técnico)
+
+Cualquier referencia interna a “pasos” o “Paso 1 / Paso 2” debe ser solo para desarrollo.
+
+En UI del técnico no deben mostrarse “nombres de pasos” ni numeración; solo el flujo lineal y el estado general del servicio.
+
+El objetivo es que la pantalla de pruebas se perciba como un proceso único, ordenado y lineal, con acciones de reinicio/cambio que limpien correctamente estados, y que el dashboard permita administrar múltiples servicios en paralelo reanudando los que están en progreso sin confusión.

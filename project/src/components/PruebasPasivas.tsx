@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Power, AlertTriangle, MapPin, CheckCircle, Loader2, StopCircle, PlayCircle, X } from 'lucide-react';
 import { useDevicePassiveStatus } from '../hooks/useDevicePassiveStatus';
+import { ConfirmModal } from './ui/Modal';
 
 interface PruebasPasivasProps {
   esn: string;
@@ -12,6 +13,7 @@ interface PruebasPasivasProps {
   botonFechaPreguntada: string | null;
   ubicacionFechaPreguntada: string | null;
   esperandoComandoActivo: boolean;
+  bloqueadas?: boolean;
   onSetIgnicionExitosa: (exitoso: boolean) => void;
   onSetBotonExitoso: (exitoso: boolean) => void;
   onSetUbicacionExitosa: (exitoso: boolean) => void;
@@ -31,6 +33,7 @@ export function PruebasPasivas({
   botonFechaPreguntada,
   ubicacionFechaPreguntada,
   esperandoComandoActivo,
+  bloqueadas = false,
   onSetIgnicionExitosa,
   onSetBotonExitoso,
   onSetUbicacionExitosa,
@@ -138,10 +141,15 @@ export function PruebasPasivas({
   };
 
   const handleDetenerClick = () => {
+    if (bloqueadas) return;
     setMostrarConfirmacion(true);
   };
 
   const handleConfirmarDetencion = () => {
+    if (bloqueadas) {
+      setMostrarConfirmacion(false);
+      return;
+    }
     detenerConsultasManual();
     setMostrarConfirmacion(false);
   };
@@ -151,21 +159,27 @@ export function PruebasPasivas({
   };
 
   const handleReanudar = () => {
+    if (bloqueadas) return;
     reanudarConsultas();
   };
 
+  useEffect(() => {
+    if (bloqueadas && mostrarConfirmacion) {
+      setMostrarConfirmacion(false);
+    }
+  }, [bloqueadas, mostrarConfirmacion]);
+
   const preguntaBoton = preguntasPendientes.find(p => p.tipo === 'boton');
   const preguntaUbicacion = preguntasPendientes.find(p => p.tipo === 'ubicacion');
-  const hayPreguntas = preguntasPendientes.length > 0 && !esperandoComandoActivo;
   const todasPruebasCompletadas =
     (!requiereIgnicion || ignicionExitosa) &&
     (!requiereBoton || botonExitoso) &&
     (!requiereUbicacion || ubicacionExitosa);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="p-6 border-b border-gray-200">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-gray-800">Validación del dispositivo instalado</h3>
+        <h3 className="text-base font-semibold text-gray-800">Pruebas de Validación</h3>
         <div className="flex items-center gap-2">
           {intentosRealizados > 0 && (
             <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full border border-gray-300">
@@ -253,7 +267,8 @@ export function PruebasPasivas({
           </div>
           <button
             onClick={handleReanudar}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+            disabled={bloqueadas}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
           >
             <PlayCircle className="w-4 h-4" />
             Reanudar consultas
@@ -280,7 +295,8 @@ export function PruebasPasivas({
           {!detencionManual ? (
             <button
               onClick={handleDetenerClick}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+              disabled={bloqueadas}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-[#0F1C3F] rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-gray-300"
             >
               <StopCircle className="w-4 h-4" />
               Detener consultas (DEV)
@@ -288,7 +304,8 @@ export function PruebasPasivas({
           ) : (
             <button
               onClick={handleReanudar}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
+              disabled={bloqueadas}
+              className="flex items-center gap-2 px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
             >
               <PlayCircle className="w-4 h-4" />
               Reanudar consultas
@@ -297,33 +314,16 @@ export function PruebasPasivas({
         </div>
       )}
 
-      {mostrarConfirmacion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              Confirmar detención de consultas
-            </h3>
-            <p className="text-sm text-gray-700 mb-4">
-              ¿Estás seguro de que deseas detener las consultas automáticas al endpoint?
-              Esta acción es solo para desarrollo y puedes reanudarlas en cualquier momento.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleConfirmarDetencion}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
-              >
-                Sí, detener
-              </button>
-              <button
-                onClick={handleCancelarDetencion}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={mostrarConfirmacion}
+        onClose={handleCancelarDetencion}
+        onConfirm={handleConfirmarDetencion}
+        title="Confirmar detención de consultas"
+        message="¿Estás seguro de que deseas detener las consultas automáticas? Esta acción es solo para desarrollo y puedes reanudarlas en cualquier momento."
+        confirmText="Sí, detener"
+        cancelText="Cancelar"
+        variant="warning"
+      />
 
       <div className="space-y-4">
         {requiereIgnicion && (
@@ -345,7 +345,8 @@ export function PruebasPasivas({
                 </p>
                 <button
                   onClick={() => marcarPruebaManual('ignicion')}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                  disabled={bloqueadas}
+                  className="w-full px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
                 >
                   ✓ Marcar Ignición como exitosa
                 </button>
@@ -379,7 +380,8 @@ export function PruebasPasivas({
                 </p>
                 <button
                   onClick={() => marcarPruebaManual('boton')}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                  disabled={bloqueadas}
+                  className="w-full px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
                 >
                   ✓ Marcar Botón de pánico como exitoso
                 </button>
@@ -397,15 +399,15 @@ export function PruebasPasivas({
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleConfirmar('boton', true)}
-                    disabled={consultando}
-                    className="flex-1 px-3 py-2 bg-green-500 text-white rounded text-sm font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={consultando || bloqueadas}
+                    className="flex-1 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-emerald-600"
                   >
                     Sí
                   </button>
                   <button
                     onClick={() => handleConfirmar('boton', false)}
-                    disabled={consultando}
-                    className="flex-1 px-3 py-2 bg-red-500 text-white rounded text-sm font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={consultando || bloqueadas}
+                    className="flex-1 px-3 py-2 bg-white text-[#0F1C3F] rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-gray-300"
                   >
                     No
                   </button>
@@ -440,7 +442,8 @@ export function PruebasPasivas({
                 </p>
                 <button
                   onClick={() => marcarPruebaManual('ubicacion')}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                  disabled={bloqueadas}
+                  className="w-full px-4 py-2 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#0F1C3F]"
                 >
                   ✓ Marcar Ubicación como exitosa
                 </button>
@@ -477,15 +480,15 @@ export function PruebasPasivas({
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleConfirmar('ubicacion', true)}
-                    disabled={consultando}
-                    className="flex-1 px-3 py-2 bg-green-500 text-white rounded text-sm font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={consultando || bloqueadas}
+                    className="flex-1 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-emerald-600"
                   >
                     Sí, confirmar ubicación
                   </button>
                   <button
                     onClick={() => handleConfirmar('ubicacion', false)}
-                    disabled={consultando}
-                    className="flex-1 px-3 py-2 bg-red-500 text-white rounded text-sm font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={consultando || bloqueadas}
+                    className="flex-1 px-3 py-2 bg-white text-[#0F1C3F] rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-gray-300"
                   >
                     No
                   </button>

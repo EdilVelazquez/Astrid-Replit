@@ -1,0 +1,95 @@
+Rediseña la barra superior y el área de agenda con un enfoque más limpio, tecnológico y minimalista, tomando como referencia visual Numaris.com, sin copiarla, pero respetando su lenguaje visual (sobrio, profesional, moderno).
+
+Lineamientos generales
+
+El nombre debe mostrarse como ASTRID (en mayúsculas), tratado como marca.
+
+Agregar un logo simple y tecnológico (abstracto, geométrico, sin exceso).
+
+Eliminar textos innecesarios como “Mi agenda”.
+
+La interfaz debe sentirse ligera, clara y pensada para uso operativo diario.
+
+Header / Barra superior
+
+Mostrar únicamente:
+
+Logo + texto ASTRID (lado izquierdo).
+
+Navegación contextual (íconos) según lo que esté activo.
+
+Perfil del usuario a la derecha (ícono circular → despliega nombre y cerrar sesión).
+
+Sin botones grandes ni colores saturados.
+
+Navegación basada en íconos con tooltip, no texto largo.
+
+Comportamiento fluido, sin recargar visualmente.
+
+Agenda / Vista principal
+
+Elimina títulos redundantes.
+
+Usa el espacio de forma horizontal, limpia y bien distribuida.
+
+Prioriza lectura rápida.
+
+Estados (tarjetas de resumen)
+
+Rediseñar los contadores (Total, Pendientes, En curso, Completados, Futuros):
+
+Estilo minimalista.
+
+Mismo color base (gris/neutral).
+
+El estado activo se resalta por contraste sutil (borde, sombra leve o línea inferior).
+
+Nada de colores fuertes por defecto.
+
+Filtros
+
+Filtros tipo “segmented control”.
+
+Mismo color base para todos.
+
+Solo el activo se diferencia (tono más oscuro, subrayado o relleno suave).
+
+Deben sentirse integrados, no como botones independientes.
+
+Vista de servicios
+
+Dos vistas:
+
+Lista (compacta, informativa).
+
+Tarjeta (más visual, pero limpia).
+
+Ambas deben verse ligeras, sin marcos pesados.
+
+Uso inteligente del espacio para evitar scroll innecesario.
+
+Responsive
+
+Diseño 100% adaptable:
+
+Desktop: información distribuida horizontalmente.
+
+Tablet: jerarquía clara, menos columnas.
+
+Móvil: tarjetas apiladas, navegación por gestos, botones accesibles.
+
+El diseño debe “respirar”, sin saturar.
+
+Estilo visual general
+
+Inspiración: herramientas profesionales tipo dashboards técnicos.
+
+Colores sobrios, tipografía clara.
+
+Microinteracciones suaves.
+
+Nada llamativo, nada infantil, nada saturado.
+
+Objetivo final
+
+Que ASTRID se perciba como una plataforma profesional, técnica y moderna, alineada visualmente con Numaris, optimizada para trabajo operativo real, clara incluso con mucha información, y cómoda tanto en escritorio como en móvil.

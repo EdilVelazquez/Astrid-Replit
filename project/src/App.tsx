@@ -1,25 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from './store';
-import { PruebasActivas } from './components/PruebasActivas';
-import { PruebasPasivas } from './components/PruebasPasivas';
-import { Resumen } from './components/Resumen';
 import { QRScanner } from './components/QRScanner';
 import { CompletionMessage } from './components/CompletionMessage';
 import { DeviceChangeModal } from './components/DeviceChangeModal';
-import { PrefolioForm } from './components/PrefolioForm';
-import { FormularioCierre } from './components/FormularioCierre';
 import { AppRouter } from './components/AppRouter';
 import CalendarioTecnico from './components/CalendarioTecnico';
+import { ServiceFlow } from './components/ServiceFlow';
 import { traducirPruebasDesdeInstallationDetails, requierePrueba } from './utils';
 import { actualizarExpediente, finalizarValidacionConExito, obtenerExpedienteCompleto, registrarCambioDispositivo, obtenerTodosLosServiciosPorEmailTecnico } from './services/expedienteService';
-import { generarExpedienteId, obtenerSesionPorExpediente, actualizarEstadoPrueba, reiniciarSesion, crearSesion, actualizarSesion } from './services/testSessionService';
+import { generarExpedienteId, obtenerSesionPorExpediente, reiniciarSesion, crearSesion } from './services/testSessionService';
 import { enviarDatosFinalesWebhook } from './services/webhookService';
 import { reiniciarServicioDePruebas, esServicioDePruebas } from './services/testServiceService';
 import { buscarEquipoEnInventario } from './services/zohoInventoryService';
 import { useAuth } from './contexts/AuthContext';
-import { Clipboard, X, Send, Activity, QrCode, CheckCircle2, LogOut, RefreshCcw, Calendar, FileText } from 'lucide-react';
+import { X } from 'lucide-react';
+import { Header } from './components/Header';
+import { ConfirmModal } from './components/ui/Modal';
 import { ValidationSummaryJSON, ExpedienteServicio } from './types';
-import { supabase } from './supabaseClient';
+import { supabase, supabaseConfigured, supabaseError } from './supabaseClient';
 import { MisServicios } from './components/misServicios/MisServicios';
 
 function formatearFechaLocal(fecha: Date): string {
@@ -33,7 +31,6 @@ function TechnicianApp() {
   const [state, dispatch] = useAppStore();
   const { user, signOut } = useAuth();
   const [serviciosCargados, setServiciosCargados] = useState(false);
-  const [mostrarResumen, setMostrarResumen] = useState(false);
   const [errorPanel, setErrorPanel] = useState<string>('');
   const [esnTemporal, setEsnTemporal] = useState('');
   const [guardandoESN, setGuardandoESN] = useState(false);
@@ -55,7 +52,11 @@ function TechnicianApp() {
   const [todosLosServicios, setTodosLosServicios] = useState<ExpedienteServicio[]>([]);
   const [pruebasCompletadas, setPruebasCompletadas] = useState(false);
   const [mostrarFormularioCierre, setMostrarFormularioCierre] = useState(false);
+  const [pruebasBloqueadas, setPruebasBloqueadas] = useState(false);
   const [mostrarMisServicios, setMostrarMisServicios] = useState(false);
+  const [mostrarModalReiniciarServicio, setMostrarModalReiniciarServicio] = useState(false);
+  const [pendingEsnDuplicado, setPendingEsnDuplicado] = useState<{ esn: string; woInfo: string; callback: () => void } | null>(null);
+  const [pendingCambioDispositivo, setPendingCambioDispositivo] = useState<{ nuevoESN: string; motivo: string; descripcion: string; woInfo: string } | null>(null);
 
 
   const handleQRScanSuccess = (decodedText: string) => {
@@ -93,16 +94,19 @@ function TechnicianApp() {
           console.error('Error al buscar ESN:', errorBusqueda);
         } else if (expedientesConESN && expedientesConESN.length > 0) {
           const expedientePrevio = expedientesConESN[0];
-          const mensaje = `⚠️ ALERTA: El ESN "${esn}" ya fue utilizado en:\n\nWO: ${expedientePrevio.work_order_name}\nAP: ${expedientePrevio.appointment_name}\n\n¿Estás seguro de que quieres usar este ESN en el servicio actual?`;
+          const woInfo = `WO: ${expedientePrevio.work_order_name}, AP: ${expedientePrevio.appointment_name}`;
 
-          agregarLogConsola(`⚠️ ESN ${esn} encontrado en WO: ${expedientePrevio.work_order_name}, AP: ${expedientePrevio.appointment_name}`);
-
-          const confirmacion = confirm(mensaje);
-          if (!confirmacion) {
-            agregarLogConsola(`❌ Uso de ESN cancelado por el usuario`);
-            return false;
-          }
-          agregarLogConsola(`✓ Usuario confirmó el uso del ESN duplicado`);
+          agregarLogConsola(`⚠️ ESN ${esn} encontrado en ${woInfo}`);
+          
+          setPendingEsnDuplicado({
+            esn,
+            woInfo,
+            callback: () => {
+              agregarLogConsola(`✓ Usuario confirmó el uso del ESN duplicado`);
+              iniciarPruebasConESN(esn, true);
+            }
+          });
+          return false;
         } else {
           agregarLogConsola(`✓ ESN no ha sido utilizado previamente`);
         }
@@ -219,6 +223,107 @@ function TechnicianApp() {
     setGuardandoESN(false);
   };
 
+  const continuarCambioDispositivoConfirmado = async (nuevoESN: string, motivo: string, descripcion: string) => {
+    if (!state.expediente_actual || !state.esn) {
+      agregarLogConsola('❌ Error: No hay expediente o ESN actual');
+      return;
+    }
+
+    setCambiandoDispositivo(true);
+    agregarLogConsola('✓ Usuario confirmó el uso del ESN duplicado');
+
+    try {
+      agregarLogConsola('🔍 Consultando CRM/Zoho Inventory para el nuevo dispositivo...');
+      const resultadoZoho = await buscarEquipoEnInventario(nuevoESN);
+
+      let zohoInventoryId: string | undefined;
+      let modeloDispositivo: string | undefined;
+      let imei: string | undefined;
+      let telefonoSim: string | undefined;
+
+      if (resultadoZoho.success && resultadoZoho.data) {
+        agregarLogConsola('✅ Equipo encontrado en CRM:');
+        agregarLogConsola(`   📦 ID: ${resultadoZoho.data.id}`);
+        agregarLogConsola(`   📱 Modelo: ${resultadoZoho.data.model}`);
+        agregarLogConsola(`   🔢 IMEI: ${resultadoZoho.data.IMEI}`);
+        agregarLogConsola(`   📞 Línea: ${resultadoZoho.data.linea}`);
+
+        zohoInventoryId = resultadoZoho.data.id;
+        modeloDispositivo = resultadoZoho.data.model;
+        imei = resultadoZoho.data.IMEI;
+        telefonoSim = resultadoZoho.data.linea;
+      } else {
+        agregarLogConsola(`⚠️ No se encontró el equipo en CRM: ${resultadoZoho.error || 'Sin información'}`);
+        agregarLogConsola('ℹ️ Se continuará sin datos de CRM');
+      }
+
+      const expedienteId = generarExpedienteId(
+        state.expediente_actual.work_order_name,
+        state.expediente_actual.appointment_name
+      );
+
+      agregarLogConsola('🗑️ Reseteando sesión de pruebas pasivas...');
+      const exitoReset = await reiniciarSesion(expedienteId, nuevoESN);
+
+      if (!exitoReset) {
+        throw new Error('Error al resetear sesión de pruebas');
+      }
+
+      agregarLogConsola('✅ Sesión de pruebas reseteada correctamente');
+      agregarLogConsola('💾 Actualizando expediente con nuevo dispositivo y datos de CRM...');
+
+      const exitoRegistro = await registrarCambioDispositivo(
+        state.expediente_actual.id,
+        state.esn,
+        nuevoESN,
+        motivo,
+        descripcion,
+        state.expediente_actual.device_esn_cambio_cantidad || 0,
+        zohoInventoryId,
+        modeloDispositivo,
+        imei,
+        telefonoSim
+      );
+
+      if (!exitoRegistro) {
+        throw new Error('Error al registrar cambio de dispositivo');
+      }
+
+      agregarLogConsola('✅ Expediente actualizado con datos del nuevo dispositivo');
+      agregarLogConsola('🔄 Reiniciando contexto del servicio...');
+
+      dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
+      setPruebasCompletadas(false);
+      setMostrarFormularioCierre(false);
+
+      const esNuevoEsnDePrueba = nuevoESN === '000000000000000';
+
+      setTimeout(() => {
+        dispatch({ type: 'SET_ESN', payload: nuevoESN });
+        agregarLogConsola('✅ Contexto del servicio reiniciado completamente');
+        agregarLogConsola('🚀 Listo para iniciar pruebas con el nuevo dispositivo');
+        
+        if (esNuevoEsnDePrueba) {
+          agregarLogConsola('🧪 ESN de prueba detectado - avance manual habilitado');
+          agregarLogConsola('📝 Use los botones de marcado manual para completar cada prueba');
+        } else {
+          agregarLogConsola('🟢 Iniciando consulta inmediata y polling automático (60s, máx 10 intentos)');
+        }
+        
+        agregarLogConsola('✅ Cambio de dispositivo completado exitosamente');
+      }, 100);
+
+      setEsnTemporal('');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      agregarLogConsola(`❌ Error al cambiar dispositivo: ${errorMessage}`);
+      setErrorPanel(`Error al cambiar dispositivo: ${errorMessage}`);
+      console.error('Error en continuarCambioDispositivoConfirmado:', error);
+    } finally {
+      setCambiandoDispositivo(false);
+    }
+  };
+
   const handleCambiarDispositivo = async (nuevoESN: string, motivo: string, descripcion: string) => {
     if (!state.expediente_actual || !state.esn) {
       agregarLogConsola('❌ Error: No hay expediente o ESN actual');
@@ -244,18 +349,14 @@ function TechnicianApp() {
         console.error('Error al buscar ESN:', errorBusqueda);
       } else if (expedientesConESN && expedientesConESN.length > 0) {
         const expedientePrevio = expedientesConESN[0];
-        const mensaje = `⚠️ ALERTA: El ESN "${nuevoESN}" ya fue utilizado en:\n\nWO: ${expedientePrevio.work_order_name}\nAP: ${expedientePrevio.appointment_name}\n\n¿Estás seguro de que quieres usar este ESN?`;
+        const woInfo = `WO: ${expedientePrevio.work_order_name}, AP: ${expedientePrevio.appointment_name}`;
 
-        agregarLogConsola(`⚠️ ESN ${nuevoESN} encontrado en WO: ${expedientePrevio.work_order_name}, AP: ${expedientePrevio.appointment_name}`);
+        agregarLogConsola(`⚠️ ESN ${nuevoESN} encontrado en ${woInfo}`);
 
-        const confirmacion = confirm(mensaje);
-        if (!confirmacion) {
-          agregarLogConsola(`❌ Cambio de dispositivo cancelado por el usuario`);
-          setCambiandoDispositivo(false);
-          setMostrarModalCambioDispositivo(false);
-          return;
-        }
-        agregarLogConsola(`✓ Usuario confirmó el uso del ESN duplicado`);
+        setPendingCambioDispositivo({ nuevoESN, motivo, descripcion, woInfo });
+        setCambiandoDispositivo(false);
+        setMostrarModalCambioDispositivo(false);
+        return;
       } else {
         agregarLogConsola(`✓ ESN disponible`);
       }
@@ -406,6 +507,7 @@ function TechnicianApp() {
       setPrefolioCompletado(false);
       setPruebasCompletadas(false);
       setMostrarFormularioCierre(false);
+      setPruebasBloqueadas(false);
       setServicioFinalizado(false);
       setValidationSummary(null);
       setEsnTemporal('');
@@ -811,75 +913,43 @@ function TechnicianApp() {
     p.toLowerCase().includes('buzzer')
   );
 
+  const obtenerModuloActivo = (): 'agenda' | 'servicio' | 'historial' | null => {
+    if (mostrarMisServicios) return 'historial';
+    if (mostrarCalendario) return 'agenda';
+    if (state.expediente_actual) return 'servicio';
+    return 'agenda';
+  };
+
+  const handleNavegar = async (modulo: 'agenda' | 'servicio' | 'historial' | null) => {
+    if (modulo === 'agenda') {
+      if (user?.email) {
+        const servicios = await obtenerTodosLosServiciosPorEmailTecnico(user.email);
+        setTodosLosServicios(servicios);
+      }
+      setMostrarCalendario(true);
+      setMostrarMisServicios(false);
+    } else if (modulo === 'historial') {
+      setMostrarMisServicios(true);
+      setMostrarCalendario(false);
+    } else if (modulo === 'servicio' && state.expediente_actual) {
+      setMostrarCalendario(false);
+      setMostrarMisServicios(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <header className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <Clipboard className="w-8 h-8 text-blue-600" />
-              <h1 className="text-3xl font-bold text-gray-900">
-                Validación de Pruebas Técnicas
-              </h1>
-            </div>
-            <div className="flex items-center gap-3">
-              {!mostrarCalendario && !mostrarMisServicios && (
-                <button
-                  onClick={async () => {
-                    if (user?.email) {
-                      const servicios = await obtenerTodosLosServiciosPorEmailTecnico(user.email);
-                      setTodosLosServicios(servicios);
-                    }
-                    setMostrarCalendario(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                  title="Ver calendario"
-                >
-                  <Calendar className="w-5 h-5" />
-                  <span className="hidden sm:inline">Mi Agenda</span>
-                </button>
-              )}
-              {!mostrarMisServicios && (
-                <button
-                  onClick={() => {
-                    setMostrarMisServicios(true);
-                    setMostrarCalendario(false);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-                  title="Ver historial de servicios"
-                >
-                  <FileText className="w-5 h-5" />
-                  <span className="hidden sm:inline">Mis Servicios</span>
-                </button>
-              )}
-              {contadorRequests > 0 && (
-                <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
-                  <Activity className="w-5 h-5 text-blue-600" />
-                  <div className="text-sm">
-                    <span className="text-blue-600 font-semibold">{contadorRequests}</span>
-                    <span className="text-blue-700 ml-1">requests</span>
-                  </div>
-                </div>
-              )}
-              <button
-                onClick={signOut}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
-                title="Cerrar sesión"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="hidden sm:inline">Cerrar sesión</span>
-              </button>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-gray-600">Sistema de validación de instalación y configuración</p>
-            {user && (
-              <p className="text-sm text-gray-500">
-                {user.email} {user.role && `(${user.role})`}
-              </p>
-            )}
-          </div>
-        </header>
+    <div className="min-h-screen bg-gray-50">
+      <Header
+        user={user}
+        moduloActivo={obtenerModuloActivo()}
+        onNavegar={handleNavegar}
+        onCerrarSesion={signOut}
+        mostrarAgenda={true}
+        mostrarServicio={!!state.expediente_actual}
+        mostrarHistorial={true}
+      />
+
+      <div className="max-w-4xl mx-auto px-4 py-6">
 
         {mostrarMisServicios ? (
           <MisServicios
@@ -898,204 +968,51 @@ function TechnicianApp() {
           <div className="space-y-6">
           {state.expediente_actual && (
             <>
-              {!prefolioCompletado && !servicioFinalizado && (
-                <PrefolioForm
-                  expediente={state.expediente_actual}
-                  onCompleted={handlePrefolioCompleted}
-                  onClose={handleCerrarServicio}
-                />
-              )}
-
-              {prefolioCompletado && !servicioFinalizado && state.expediente_actual.validation_final_status !== 'COMPLETADO' && (
-                <div className="bg-white rounded-lg shadow-sm border-l-4 border-blue-500 p-4 mb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                        <p className="text-sm font-semibold text-gray-900">
-                          Información del servicio registrada
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-3">
-                        Los datos están guardados y el servicio continúa con las pruebas del dispositivo
-                      </p>
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-xs">
-                        <p><span className="font-medium text-gray-700">Vehículo:</span> {state.expediente_actual.asset_marca} {state.expediente_actual.asset_submarca}</p>
-                        <p><span className="font-medium text-gray-700">VIN:</span> {state.expediente_actual.asset_vin}</p>
-                        <p><span className="font-medium text-gray-700">Placas:</span> {state.expediente_actual.asset_placas}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        if (!confirm('¿Reiniciar el servicio completo? Esta acción eliminará toda la información y las pruebas realizadas. No se puede deshacer.')) {
-                          return;
-                        }
-
-                        await handleCerrarServicio();
-                      }}
-                      className="ml-4 px-3 py-2 bg-red-600 text-white text-sm rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center gap-2"
-                    >
-                      <RefreshCcw className="w-4 h-4" />
-                      Reiniciar
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {prefolioCompletado && servicioFinalizado && state.expediente_actual.device_esn && (
-                <div className="bg-green-50 rounded-lg shadow-sm border-2 border-green-300 p-6">
-                  <h3 className="text-base font-semibold text-gray-800 mb-3">ESN del dispositivo</h3>
-                  <div className="bg-white rounded-lg px-4 py-3 border border-green-200">
-                    <p className="text-sm text-gray-600 mb-1">ESN registrado:</p>
-                    <p className="font-mono text-lg font-semibold text-blue-700">{state.expediente_actual.device_esn}</p>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">✓ Servicio completado - No se puede modificar</p>
-                </div>
-              )}
-
-              {prefolioCompletado && !servicioFinalizado && state.esn && state.expediente_actual?.validation_final_status !== 'COMPLETADO' && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800">ESN del dispositivo</p>
-                      <p className="text-sm text-green-600 mt-1">✓ ESN guardado: {state.esn}</p>
-                    </div>
-                    <button
-                      onClick={() => setMostrarModalCambioDispositivo(true)}
-                      disabled={state.esperando_respuesta_comando_activo || cambiandoDispositivo}
-                      className="px-3 py-2 bg-orange-600 text-white text-sm rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-                      title="Cambiar el dispositivo actual por otro"
-                    >
-                      <RefreshCcw className="w-4 h-4" />
-                      Cambiar Dispositivo
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {servicioFinalizado && validationSummary && state.expediente_actual ? (
+              {servicioFinalizado && validationSummary ? (
                 <CompletionMessage
                   expediente={state.expediente_actual}
                   validationSummary={validationSummary}
                 />
-              ) : servicioFinalizado ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-yellow-800">
-                    🔍 DEBUG: Servicio finalizado pero falta información:
-                    <br />
-                    • servicioFinalizado: {servicioFinalizado ? '✓' : '✗'}
-                    <br />
-                    • validationSummary: {validationSummary ? '✓' : '✗'}
-                    <br />
-                    • expediente_actual: {state.expediente_actual ? '✓' : '✗'}
-                  </p>
-                </div>
-              ) : null}
-
-              {state.esn && !servicioFinalizado && !mostrarFormularioCierre && (
-                <>
-                  {pruebasCompletadas && (
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-300 p-6 mb-6 shadow-lg">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                          <CheckCircle2 className="w-7 h-7 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-green-800">Pruebas Completadas</h3>
-                          <p className="text-green-700 text-sm">Todas las pruebas técnicas fueron ejecutadas exitosamente</p>
-                        </div>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 mb-4 border border-green-200">
-                        <p className="text-gray-700 text-sm mb-2">
-                          <strong>Estado:</strong> Listo para continuar al formulario de cierre
-                        </p>
-                        <p className="text-gray-600 text-xs">
-                          Confirme que las pruebas están correctas para avanzar a la siguiente etapa del servicio.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          agregarLogConsola('✅ Técnico confirmó pruebas - avanzando a formulario de cierre');
-                          setMostrarFormularioCierre(true);
-                        }}
-                        className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg shadow-md transition-all duration-200 flex items-center justify-center gap-3"
-                      >
-                        <CheckCircle2 className="w-6 h-6" />
-                        Confirmar Pruebas y Continuar
-                      </button>
-                    </div>
-                  )}
-
-                  <PruebasActivas
-                    esn={state.esn}
-                    expedienteId={generarExpedienteId(
-                      state.expediente_actual?.work_order_name || null,
-                      state.expediente_actual?.appointment_name || null
-                    )}
-                    pruebasRequeridas={traducirPruebasDesdeInstallationDetails(
-                      state.expediente_actual?.installation_details || ''
-                    )}
-                    bloqueoExitoso={state.bloqueo_exitoso}
-                    desbloqueoExitoso={state.desbloqueo_exitoso}
-                    buzzerExitoso={state.buzzer_exitoso}
-                    buzzerOffExitoso={state.buzzer_off_exitoso}
-                    onSetBloqueoExitoso={(val) =>
-                      dispatch({ type: 'SET_BLOQUEO_EXITOSO', payload: val })
-                    }
-                    onSetDesbloqueoExitoso={(val) =>
-                      dispatch({ type: 'SET_DESBLOQUEO_EXITOSO', payload: val })
-                    }
-                    onSetBuzzerExitoso={(val) =>
-                      dispatch({ type: 'SET_BUZZER_EXITOSO', payload: val })
-                    }
-                    onSetBuzzerOffExitoso={(val) =>
-                      dispatch({ type: 'SET_BUZZER_OFF_EXITOSO', payload: val })
-                    }
-                    onErrorPanel={setErrorPanel}
-                    onLogConsola={agregarLogConsola}
-                  />
-
-                  <PruebasPasivas
-                    esn={state.esn}
-                    expedienteId={generarExpedienteId(
-                      state.expediente_actual?.work_order_name || null,
-                      state.expediente_actual?.appointment_name || null
-                    )}
-                    pruebasRequeridas={traducirPruebasDesdeInstallationDetails(
-                      state.expediente_actual?.installation_details || ''
-                    )}
-                    ignicionExitosa={state.ignicion_exitosa}
-                    botonExitoso={state.boton_exitoso}
-                    ubicacionExitosa={state.ubicacion_exitosa}
-                    botonFechaPreguntada={state.boton_fecha_preguntada}
-                    ubicacionFechaPreguntada={state.ubicacion_fecha_preguntada}
-                    esperandoComandoActivo={state.esperando_respuesta_comando_activo}
-                    onSetIgnicionExitosa={(val) =>
-                      dispatch({ type: 'SET_IGNICION_EXITOSA', payload: val })
-                    }
-                    onSetBotonExitoso={(val) =>
-                      dispatch({ type: 'SET_BOTON_EXITOSO', payload: val })
-                    }
-                    onSetUbicacionExitosa={(val) =>
-                      dispatch({ type: 'SET_UBICACION_EXITOSA', payload: val })
-                    }
-                    onSetBotonFechaPreguntada={(fecha) =>
-                      dispatch({ type: 'SET_BOTON_FECHA_PREGUNTADA', payload: fecha })
-                    }
-                    onSetUbicacionFechaPreguntada={(fecha) =>
-                      dispatch({ type: 'SET_UBICACION_FECHA_PREGUNTADA', payload: fecha })
-                    }
-                    onErrorPanel={setErrorPanel}
-                    onLogConsola={agregarLogConsola}
-                  />
-                </>
-              )}
-
-              {mostrarFormularioCierre && !servicioFinalizado && state.expediente_actual && (
-                <FormularioCierre
+              ) : (
+                <ServiceFlow
                   expediente={state.expediente_actual}
-                  onCompleted={handleFormularioCierreCompletado}
-                  onCancel={() => setMostrarFormularioCierre(false)}
+                  esn={state.esn}
+                  prefolioCompletado={prefolioCompletado}
+                  pruebasCompletadas={pruebasCompletadas}
+                  mostrarFormularioCierre={mostrarFormularioCierre}
+                  ignicionExitosa={state.ignicion_exitosa}
+                  botonExitoso={state.boton_exitoso}
+                  ubicacionExitosa={state.ubicacion_exitosa}
+                  bloqueoExitoso={state.bloqueo_exitoso}
+                  desbloqueoExitoso={state.desbloqueo_exitoso}
+                  buzzerExitoso={state.buzzer_exitoso}
+                  buzzerOffExitoso={state.buzzer_off_exitoso}
+                  botonFechaPreguntada={state.boton_fecha_preguntada}
+                  ubicacionFechaPreguntada={state.ubicacion_fecha_preguntada}
+                  esperandoComandoActivo={state.esperando_respuesta_comando_activo}
+                  onPrefolioCompleted={handlePrefolioCompleted}
+                  onClose={() => setMostrarModalReiniciarServicio(true)}
+                  onCambiarDispositivo={() => setMostrarModalCambioDispositivo(true)}
+                  onSetIgnicionExitosa={(val) => dispatch({ type: 'SET_IGNICION_EXITOSA', payload: val })}
+                  onSetBotonExitoso={(val) => dispatch({ type: 'SET_BOTON_EXITOSO', payload: val })}
+                  onSetUbicacionExitosa={(val) => dispatch({ type: 'SET_UBICACION_EXITOSA', payload: val })}
+                  onSetBloqueoExitoso={(val) => dispatch({ type: 'SET_BLOQUEO_EXITOSO', payload: val })}
+                  onSetDesbloqueoExitoso={(val) => dispatch({ type: 'SET_DESBLOQUEO_EXITOSO', payload: val })}
+                  onSetBuzzerExitoso={(val) => dispatch({ type: 'SET_BUZZER_EXITOSO', payload: val })}
+                  onSetBuzzerOffExitoso={(val) => dispatch({ type: 'SET_BUZZER_OFF_EXITOSO', payload: val })}
+                  onSetBotonFechaPreguntada={(fecha) => dispatch({ type: 'SET_BOTON_FECHA_PREGUNTADA', payload: fecha })}
+                  onSetUbicacionFechaPreguntada={(fecha) => dispatch({ type: 'SET_UBICACION_FECHA_PREGUNTADA', payload: fecha })}
+                  onErrorPanel={setErrorPanel}
+                  onLogConsola={agregarLogConsola}
+                  pruebasBloqueadas={pruebasBloqueadas}
+                  onPruebasCompletadas={() => {
+                    agregarLogConsola('✅ Técnico confirmó pruebas - avanzando a formulario de cierre');
+                    setPruebasCompletadas(true);
+                    setPruebasBloqueadas(true);
+                    setMostrarFormularioCierre(true);
+                  }}
+                  onFormularioCierreCompletado={handleFormularioCierreCompletado}
+                  onCancelarCierre={() => setMostrarFormularioCierre(false)}
                 />
               )}
             </>
@@ -1216,11 +1133,80 @@ function TechnicianApp() {
           onClose={() => setMostrarModalCambioDispositivo(false)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={mostrarModalReiniciarServicio}
+        onClose={() => setMostrarModalReiniciarServicio(false)}
+        onConfirm={async () => {
+          setMostrarModalReiniciarServicio(false);
+          await handleCerrarServicio();
+        }}
+        title="Reiniciar servicio"
+        message="¿Reiniciar el servicio completo? Esta acción eliminará toda la información y las pruebas realizadas. No se puede deshacer."
+        confirmText="Reiniciar"
+        cancelText="Cancelar"
+        variant="warning"
+      />
+
+      {pendingEsnDuplicado && (
+        <ConfirmModal
+          isOpen={!!pendingEsnDuplicado}
+          onClose={() => setPendingEsnDuplicado(null)}
+          onConfirm={() => {
+            const callback = pendingEsnDuplicado.callback;
+            setPendingEsnDuplicado(null);
+            callback();
+          }}
+          title="ESN ya utilizado"
+          message={`El ESN "${pendingEsnDuplicado.esn}" ya fue utilizado en: ${pendingEsnDuplicado.woInfo}. ¿Estás seguro de que quieres usar este ESN en el servicio actual?`}
+          confirmText="Usar ESN"
+          cancelText="Cancelar"
+          variant="warning"
+        />
+      )}
+
+      {pendingCambioDispositivo && (
+        <ConfirmModal
+          isOpen={!!pendingCambioDispositivo}
+          onClose={() => setPendingCambioDispositivo(null)}
+          onConfirm={async () => {
+            const { nuevoESN, motivo, descripcion } = pendingCambioDispositivo;
+            setPendingCambioDispositivo(null);
+            await continuarCambioDispositivoConfirmado(nuevoESN, motivo, descripcion);
+          }}
+          title="ESN ya utilizado"
+          message={`El ESN "${pendingCambioDispositivo.nuevoESN}" ya fue utilizado en: ${pendingCambioDispositivo.woInfo}. ¿Estás seguro de que quieres usar este ESN para el cambio de dispositivo?`}
+          confirmText="Usar ESN"
+          cancelText="Cancelar"
+          variant="warning"
+        />
+      )}
+    </div>
+  );
+}
+
+function ConfigurationError() {
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
+        <div className="text-red-500 mb-4">
+          <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h1 className="text-xl font-bold text-gray-800 mb-2">Error de Configuración</h1>
+        <p className="text-gray-600 mb-4">{supabaseError}</p>
+        <p className="text-sm text-gray-500">Contacta al administrador del sistema.</p>
+      </div>
     </div>
   );
 }
 
 function App() {
+  if (!supabaseConfigured) {
+    return <ConfigurationError />;
+  }
+
   return (
     <AppRouter>
       <TechnicianApp />

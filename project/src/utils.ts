@@ -79,7 +79,7 @@ export function convertirFechaAISO(fechaStr: string): string {
   return `${y}-${mes}-${dia}T${hora}:${minuto}:${segundo}`;
 }
 
-export function requierePrueba(installation_details: string, tipoPrueba: 'bloqueo' | 'buzzer' | 'boton'): boolean {
+export function requierePrueba(installation_details: string, tipoPrueba: 'bloqueo' | 'buzzer' | 'boton' | 'ignicion'): boolean {
   const detallesLower = installation_details.toLowerCase();
 
   switch (tipoPrueba) {
@@ -89,6 +89,8 @@ export function requierePrueba(installation_details: string, tipoPrueba: 'bloque
       return detallesLower.includes('buzzer');
     case 'boton':
       return detallesLower.includes('botón de pánico') || detallesLower.includes('boton de panico');
+    case 'ignicion':
+      return detallesLower.includes('ignición') || detallesLower.includes('ignicion');
     default:
       return false;
   }

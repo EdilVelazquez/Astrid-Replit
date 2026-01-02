@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ExpedienteServicio } from '../types';
 import { guardarPrefolioDatos, guardarPrefolioFotos } from '../services/prefolioService';
 import { buscarEquipoEnInventario } from '../services/zohoInventoryService';
-import { notificarInicioTrabajo } from '../services/serviceTransitionService';
+import { notificarInicioTrabajo, notificarCreacionAsset, notificarEdicionAsset } from '../services/serviceTransitionService';
 import { supabase } from '../supabaseClient';
 import { CheckCircle, Loader2, AlertCircle, Camera, FileImage, QrCode, X, MapPin, Calendar, User, Building, Truck, Server } from 'lucide-react';
 import { QRScanner } from './QRScanner';
@@ -27,7 +27,7 @@ interface VehicleModel {
   name: string;
 }
 
-export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormProps) {
+export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: PrefolioFormProps) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -572,6 +572,85 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
       }
 
       console.log('✅ [PREFOLIO] Datos y fotos guardados exitosamente');
+
+      // Verificar cambios de vehículo para webhooks
+      const vinOriginal = (expediente.asset_vin || '').trim().toUpperCase();
+      const vinNuevo = vin.trim().toUpperCase();
+      const vinCambio = vinNuevo.length > 0 && vinNuevo !== vinOriginal;
+
+      // Verificar otros cambios de vehículo (solo si realmente cambiaron)
+      const placasOriginal = (expediente.asset_placas || '').trim().toUpperCase();
+      const placasNuevo = placas.trim().toUpperCase();
+      const colorOriginal = (expediente.asset_color || '').trim().toLowerCase();
+      const colorNuevo = color.trim().toLowerCase();
+      const economicoOriginal = (expediente.asset_economico || '').trim();
+      const economicoNuevo = numeroEconomico.trim();
+      const añoOriginal = (expediente.vehicle_year || '').trim();
+      const añoNuevo = año.trim();
+      const odometroOriginal = expediente.vehicle_odometer || 0;
+      const odometroNuevo = parseFloat(odometro) || 0;
+
+      const cambioPlacas = placasNuevo.length > 0 && placasNuevo !== placasOriginal;
+      const cambioColor = colorNuevo.length > 0 && colorNuevo !== colorOriginal;
+      const cambioEconomico = economicoNuevo.length > 0 && economicoNuevo !== economicoOriginal;
+      const cambioAño = añoNuevo.length > 0 && añoNuevo !== añoOriginal;
+      const cambioOdometro = odometroNuevo > 0 && odometroNuevo !== odometroOriginal;
+
+      const otrosCambios = cambioPlacas || cambioColor || cambioEconomico || cambioAño || cambioOdometro;
+
+      // Enviar webhook de CreateAsset si VIN cambió
+      if (vinCambio) {
+        console.log('🔔 [PREFOLIO] VIN cambió - enviando webhook CreateAsset...');
+        const resultadoAsset = await notificarCreacionAsset({
+          appointment_name: expediente.appointment_name || '',
+          work_order_name: expediente.work_order_name || '',
+          esn: esn,
+          technician_email: expediente.email_tecnico || '',
+          asset_data: {
+            vin: vinNuevo,
+            vin_original: vinOriginal,
+            placas: placas || undefined,
+            color: color || undefined,
+            marca: marcaSeleccionada?.name || undefined,
+            modelo: modeloSeleccionado?.name || undefined,
+            año: año || undefined,
+            numero_economico: numeroEconomico || undefined,
+            odometro: odometro || undefined,
+          }
+        });
+
+        if (!resultadoAsset.success) {
+          console.error('❌ [PREFOLIO] Error al enviar CreateAsset:', resultadoAsset.error);
+        } else {
+          console.log('✅ [PREFOLIO] Webhook CreateAsset enviado exitosamente');
+        }
+      } else if (otrosCambios && !vinCambio) {
+        // Enviar webhook de EditAsset si hay otros cambios (pero no VIN)
+        console.log('🔔 [PREFOLIO] Datos de vehículo cambiaron - enviando webhook EditAsset...');
+        const resultadoAsset = await notificarEdicionAsset({
+          appointment_name: expediente.appointment_name || '',
+          work_order_name: expediente.work_order_name || '',
+          esn: esn,
+          technician_email: expediente.email_tecnico || '',
+          asset_data: {
+            vin: vinNuevo || undefined,
+            placas: placas || undefined,
+            color: color || undefined,
+            marca: marcaSeleccionada?.name || undefined,
+            modelo: modeloSeleccionado?.name || undefined,
+            año: año || undefined,
+            numero_economico: numeroEconomico || undefined,
+            odometro: odometro || undefined,
+          }
+        });
+
+        if (!resultadoAsset.success) {
+          console.error('❌ [PREFOLIO] Error al enviar EditAsset:', resultadoAsset.error);
+        } else {
+          console.log('✅ [PREFOLIO] Webhook EditAsset enviado exitosamente');
+        }
+      }
+
       console.log('🔔 [PREFOLIO] Enviando notificación de inicio de trabajo...');
 
       // Enviar notificación de inicio de trabajo (start_work)
@@ -612,31 +691,8 @@ export function PrefolioForm({ expediente, onCompleted, onClose }: PrefolioFormP
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Información del servicio</h2>
-          <p className="text-sm text-gray-600">
-            Revisa los detalles y completa la información del vehículo y equipo
-          </p>
-        </div>
-        {onClose && (
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm('¿Cerrar este servicio? El formulario se reiniciará completamente y deberás iniciar desde cero.')) {
-                onClose();
-              }
-            }}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Cerrar servicio"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        )}
-      </div>
-
-      <section className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div className="space-y-6">
+      <section className="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Building className="w-5 h-5 text-blue-600" />
           Detalles del servicio
