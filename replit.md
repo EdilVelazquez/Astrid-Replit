@@ -88,104 +88,45 @@ project/
 - La app requiere conexión a un proyecto Supabase externo existente
 - Las migraciones en `/supabase/migrations/` definen el esquema de BD
 - Puerto de desarrollo: 5000
-- El servicio solo puede iniciarse desde el botón dedicado (no clic en tarjeta)
-- El servicio solo puede iniciarse el día programado
 
-## Diseño de UI/UX (Actualizado)
+## API de Métricas (OpenAPI)
+Servidor Express separado que expone métricas de la plataforma.
 
-### Sistema de Diseño Numaris
-La aplicación utiliza un sistema de diseño inspirado en Numaris, con una paleta de colores unificada y componentes reutilizables.
+### Endpoints
+- `GET /api/metrics/openapi.json` - Especificación OpenAPI 3.0 (público)
+- `GET /api/metrics/impact` - Métricas de impacto (requiere autenticación)
+- `GET /health` - Health check
 
-#### Paleta de Colores (`src/styles/colors.ts`)
-- **Primary**: Navy blue #0F1C3F (botones principales, stepper activo, indicadores "en curso")
-- **Primary Hover**: #1A2B52
-- **Background**: Light blue #E8F0FE (fondo de pantallas)
-- **Surface**: White (tarjetas, modales)
-- **Neutral**: Escala de grises (text, borders, backgrounds)
-- **Success**: Emerald #10B981 (botón de confirmación positiva)
-- **Warning**: Amber #F59E0B
-- **Error**: Red #EF4444
-
-#### Componentes UI Reutilizables (`src/components/ui/`)
-- **Modal**: Modal base con backdrop blur, tecla Escape para cerrar
-- **ConfirmModal**: Para confirmaciones de 2 botones (Sí/No, Confirmar/Cancelar)
-- **AlertModal**: Para mensajes informativos con un solo botón
-
-#### Estandarización de Botones
-- **Primary**: bg-[#0F1C3F] text-white border-[#0F1C3F] - Acciones principales
-- **Secondary**: bg-white text-gray-700 border-gray-300 - Acciones secundarias
-- **Success**: bg-emerald-500 text-white - Confirmaciones positivas
-- **Todas las confirmaciones del sistema** usan ConfirmModal en lugar de `window.confirm()`
-
-### Header / Barra Superior
-- **Identidad**: Nombre "Astrid" como marca del producto
-- **Estilo**: Minimalista, profesional, tonos neutros
-- **Navegación dinámica contextual**:
-  - Módulos visibles según el estado del usuario
-  - Iconos + etiquetas cortas (Agenda, Servicio, Historial)
-  - Módulo activo con resaltado sutil (fondo gris + icono azul)
-- **Perfil de usuario**:
-  - Avatar circular con iniciales del usuario
-  - Dropdown al hacer clic con nombre, email, rol
-  - Botón "Cerrar sesión" dentro del dropdown (no visible como texto)
-- **Componente**: `src/components/Header.tsx`
-
-### Flujo de Servicio Unificado (ServiceFlow)
-- **Contenedor único**: Todo el servicio vive en un solo componente visual
-- **Stepper visual**: Indicador de progreso con 3 pasos (Datos del Vehículo → Pruebas del Dispositivo → Documentación Final)
-- **Diseño Numaris**: Colores navy #0F1C3F para pasos completados/activos, gray-200 para pendientes
-- **Botón Continuar**: Aparece automáticamente cuando todas las pruebas del dispositivo están completas
-- **Transiciones suaves**: Sin cortes bruscos entre secciones, flujo continuo de arriba a abajo
-- **Sin etiquetas numéricas**: Solo iconos y nombres de etapa en el header
-- **Componente principal**: `src/components/ServiceFlow.tsx`
-
-### Acciones de Reinicio
-- **Cambiar Dispositivo**: Resetea SOLO las pruebas, mantiene datos del vehículo
-- **Reiniciar Servicio**: Vuelve al estado inicial completo (nuevo servicio)
-
-### Dashboard/Calendario
-- Vista unificada de servicios (sin duplicación "Servicios del día" + "Mi agenda")
-- Dos modos de visualización intercambiables:
-  - **Modo Lista**: Tabla compacta con Hora, AP/Folio, Cliente, Estado, Acción
-  - **Modo Tarjeta**: Vista detallada con información completa del servicio
-- Filtros de estado (Todos/Pendientes/En Curso/Completados) aplican a ambos modos
-- Navegación de fecha aplica a ambos modos
-- Servicios en progreso muestran botón "Reanudar" 
-- Servicios pendientes del día muestran botón "Iniciar"
-- Servicios completados solo se muestran como histórico (sin acciones)
-
-## API de Exportación de Datos
-La aplicación incluye una API REST para exportar datos de las tablas de Supabase en tiempo real.
-
-### Endpoints disponibles:
-- `GET /api/health` - Estado del servidor (sin autenticación)
-- `GET /api/tables` - Lista de tablas disponibles (requiere token)
-- `GET /api/export/:table` - Exporta todos los datos de una tabla (requiere token)
-- `GET /api/export/:table/count` - Cuenta de registros en una tabla (requiere token)
-
-### Autenticación:
-Todas las peticiones (excepto /api/health) requieren header:
+### Autenticación
+Bearer token en header Authorization:
 ```
-Authorization: Bearer <USAGE_EXPORT_TOKEN>
+Authorization: Bearer <API_METRICS_KEY>
 ```
 
-### Tablas disponibles:
-- expedientes_servicio
-- device_test_sessions
-- user_profiles
-- device_changes
-- prefolio_data
-- cierre_data
-- test_services
+### Servidor
+- Puerto: 3001
+- Código: `project/server/index.js`
+- Workflow: "Metrics API"
 
-### Ejemplos de uso:
-```bash
-# Health check
-curl https://tu-dominio/api/health
+### Métricas expuestas (v2.0)
+**Servicios:**
+- Total, completados, en progreso, pendientes
+- Con prefolio, cambios de dispositivo
+- Servicios hoy, servicios última semana
+- Desglose por: tipo, ciudad, empresa, estado de validación
 
-# Listar tablas
-curl -H "Authorization: Bearer TOKEN" https://tu-dominio/api/tables
+**Pruebas de dispositivos:**
+- Total sesiones, sesiones activas
+- Intentos promedio
+- Tasas de éxito: ignición, botón pánico, ubicación, bloqueo, desbloqueo, buzzer
 
-# Exportar datos
-curl -H "Authorization: Bearer TOKEN" https://tu-dominio/api/export/expedientes_servicio
-```
+**Usuarios:**
+- Total, activos, por rol
+
+**Vehículos:**
+- Marcas y modelos registrados
+- Servicios por marca de vehículo
+
+**Eficiencia:**
+- Tasa de completado
+- Promedio de duración de servicios

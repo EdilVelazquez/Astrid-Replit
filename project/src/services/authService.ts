@@ -1,6 +1,5 @@
 import { supabase } from '../supabaseClient';
 import { UserProfile } from '../types';
-import { validateRegistrationEmail } from './permissionsService';
 
 export async function signIn(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -33,15 +32,6 @@ export async function signInWithGoogle() {
 }
 
 export async function signUp(email: string, password: string, fullName?: string) {
-  const validation = await validateRegistrationEmail(email);
-
-  if (!validation.allowed) {
-    return {
-      success: false,
-      error: 'Para crear una cuenta con este correo, contacta a tu coordinador para autorización'
-    };
-  }
-
   const { data, error } = await supabase.auth.signUp({
     email,
     password,

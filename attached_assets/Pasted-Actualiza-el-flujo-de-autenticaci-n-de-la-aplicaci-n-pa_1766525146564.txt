@@ -1,0 +1,34 @@
+Actualiza el flujo de autenticación de la aplicación para implementar un sistema de registro discreto por invitación y validación de catálogo, siguiendo estas instrucciones exactas:
+
+Interfaz de Autenticación:
+
+Elimina visualmente el botón de "Continuar con Google" de todas las pantallas (Login y Registro). Mantén la configuración del proveedor en el backend de Supabase pero no lo muestres en la UI.
+
+El botón de acción inicial en el registro debe decir simplemente "Enviar".
+
+Flujo de Registro Discreto (SignUp):
+
+Paso 1: Solicita únicamente el correo electrónico. Al dar clic en "Enviar", realiza una petición POST al webhook: https://aiwebhookn8n.numaris.com/webhook/0ad03574-410a-4af4-be70-0bc4287eaafc.
+
+Manejo de Respuesta y Mensaje de David: Independientemente de si el correo existe o no en la respuesta del webhook, muestra siempre el siguiente mensaje en pantalla:
+
+"En dado caso de que estés registrado en nuestra base de datos, recibirás un correo con las instrucciones para completar tu registro. Revisa tu bandeja de entrada."
+
+Lógica Interna (Invisible al usuario):
+
+Si el webhook responde que el correo SÍ existe en el catálogo, habilita en la misma pantalla los campos adicionales: Nombre, Apellido, Contraseña y Confirmar Contraseña.
+
+Si el webhook responde que NO existe, no habilites ningún campo adicional; mantén al usuario únicamente con el mensaje genérico anterior. Esto evita dar indicios de si el correo fue validado o rechazado.
+
+Creación de Cuenta en Supabase:
+
+Una vez que el usuario validado llene sus datos, ejecuta supabase.auth.signUp.
+
+Asegúrate de que el sistema espere la confirmación de correo (Email Confirmation) antes de permitir el acceso al dashboard. Si el usuario intenta loguearse sin confirmar, muestra el mensaje estándar de "Email not confirmed".
+
+Experiencia de Usuario:
+
+Implementa estados de carga (Loading) mientras el webhook de n8n responde.
+
+Asegúrate de que el correo ingresado en el paso 1 se preserve internamente para la creación final de la cuenta.
+
