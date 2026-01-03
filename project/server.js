@@ -168,8 +168,8 @@ if (existsSync(distPath)) {
     }
   };
   
-  // Inject runtime config into index.html
-  app.get('*', (req, res, next) => {
+  // Inject runtime config into index.html (catch-all for SPA routing)
+  app.get('/{*splat}', (req, res, next) => {
     if (req.path.startsWith('/api/')) {
       return next();
     }
