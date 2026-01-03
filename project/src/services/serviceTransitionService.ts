@@ -1,4 +1,5 @@
 const TRANSITION_WEBHOOK_URL = 'https://aiwebhookn8n.numaris.com/webhook/c8cb35f5-2567-4584-b7f1-319fdf830443';
+// Webhook version: 2.0 - Unified endpoint for service transitions
 
 export interface TransitionWebhookParams {
   action: 'start_work' | 'complete_work' | 'create_asset' | 'edit_asset';
