@@ -1,0 +1,480 @@
+Documentación Completa: Sistema de Check-In Geofence
+1. Estructura del Proyecto
+
+project/
+├── src/
+│   ├── components/
+│   │   ├── ServicePointConfig.tsx      # Configuración del punto de servicio
+│   │   ├── CheckInButton.tsx           # Botón y lógica de check-in
+│   │   ├── MapView.tsx                 # Visualización del mapa
+│   │   └── ActivityLogs.tsx            # Historial de check-ins
+│   ├── hooks/
+│   │   └── useGeolocation.ts           # Hook para geolocalización HTML5
+│   ├── utils/
+│   │   └── haversine.ts                # Cálculo de distancia (Fórmula de Haversine)
+│   ├── types/
+│   │   └── index.ts                    # Tipos TypeScript
+│   ├── App.tsx                         # Componente principal
+│   ├── main.tsx                        # Punto de entrada
+│   └── index.css                       # Estilos globales con Tailwind
+├── package.json                        # Dependencias
+├── vite.config.ts                      # Configuración de Vite
+├── tailwind.config.js                  # Configuración de Tailwind
+├── tsconfig.json                       # Configuración de TypeScript
+└── index.html                          # HTML base
+2. Dependencias y Configuración
+package.json
+
+{
+  "dependencies": {
+    "@supabase/Bolt Database-js": "^2.57.4",
+    "lucide-react": "^0.344.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.18",
+    "eslint": "^9.9.1",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.2"
+  }
+}
+Comandos de instalación
+
+npm install react react-dom
+npm install lucide-react @supabase/Bolt Database-js
+npm install -D @vitejs/plugin-react vite typescript
+npm install -D tailwindcss postcss autoprefixer
+npm install -D @types/react @types/react-dom
+vite.config.ts
+
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  optimizeDeps: {
+    exclude: ['lucide-react'],
+  },
+});
+tailwind.config.js
+
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+postcss.config.js
+
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+3. Tipos TypeScript
+src/types/index.ts
+
+
+import { Coordinates } from '../utils/haversine';
+
+export type { Coordinates };
+
+export interface ServicePoint {
+  latitude: number;
+  longitude: number;
+  label?: string;
+}
+
+export interface CheckInLog {
+  id: string;
+  timestamp: Date;
+  userLocation: Coordinates;
+  servicePoint: Coordinates;
+  distance: number;
+  success: boolean;
+}
+
+export type GPSStatus = 'idle' | 'requesting' | 'success' | 'error' | 'denied';
+4. Utilidades: Fórmula de Haversine
+src/utils/haversine.ts
+
+La fórmula de Haversine calcula la distancia entre dos puntos en la superficie de una esfera (Tierra) dados sus valores de latitud y longitud.
+
+
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export function calculateDistance(
+  point1: Coordinates,
+  point2: Coordinates
+): number {
+  const R = 6371e3; // Radio de la Tierra en metros
+  
+  // Convertir grados a radianes
+  const φ1 = (point1.latitude * Math.PI) / 180;
+  const φ2 = (point2.latitude * Math.PI) / 180;
+  const Δφ = ((point2.latitude - point1.latitude) * Math.PI) / 180;
+  const Δλ = ((point2.longitude - point1.longitude) * Math.PI) / 180;
+
+  // Fórmula de Haversine
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  // Distancia en metros
+  return R * c;
+}
+Explicación:
+
+R: Radio promedio de la Tierra (6,371 km = 6,371,000 metros)
+φ: Latitud en radianes
+Δφ: Diferencia de latitudes
+Δλ: Diferencia de longitudes
+Retorna la distancia en metros
+5. Hook: useGeolocation
+src/hooks/useGeolocation.ts
+
+Este hook personalizado encapsula la API de Geolocalización HTML5 con manejo de errores robusto.
+
+
+import { useState, useCallback } from 'react';
+import { Coordinates, GPSStatus } from '../types';
+
+interface GeolocationState {
+  location: Coordinates | null;
+  status: GPSStatus;
+  error: string | null;
+}
+
+export function useGeolocation() {
+  const [state, setState] = useState<GeolocationState>({
+    location: null,
+    status: 'idle',
+    error: null,
+  });
+
+  const getCurrentLocation = useCallback((): Promise<Coordinates> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        setState({
+          location: null,
+          status: 'error',
+          error: 'Geolocalización no soportada en este navegador',
+        });
+        reject(new Error('Geolocalización no soportada'));
+        return;
+      }
+
+      setState(prev => ({ ...prev, status: 'requesting', error: null }));
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords: Coordinates = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          setState({
+            location: coords,
+            status: 'success',
+            error: null,
+          });
+          resolve(coords);
+        },
+        (error) => {
+          let errorMessage = 'Error al obtener ubicación';
+          let status: GPSStatus = 'error';
+
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Permiso de ubicación denegado';
+              status = 'denied';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Ubicación no disponible';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Tiempo de espera agotado';
+              break;
+          }
+
+          setState({
+            location: null,
+            status,
+            error: errorMessage,
+          });
+          reject(new Error(errorMessage));
+        },
+        {
+          enableHighAccuracy: true,  // Máxima precisión (GPS)
+          timeout: 10000,            // 10 segundos timeout
+          maximumAge: 0,             // No usar caché
+        }
+      );
+    });
+  }, []);
+
+  return {
+    ...state,
+    getCurrentLocation,
+  };
+}
+Características clave:
+
+enableHighAccuracy: true: Usa GPS para máxima precisión
+timeout: 10000: Espera máximo 10 segundos
+maximumAge: 0: No usa ubicaciones cacheadas
+Manejo de errores: Permisos denegados, ubicación no disponible, timeout
+6. Componentes
+ServicePointConfig.tsx
+Permite al usuario ingresar manualmente las coordenadas del punto de servicio.
+
+
+import { useState } from 'react';
+import { MapPin, Save } from 'lucide-react';
+import { ServicePoint } from '../types';
+
+interface ServicePointConfigProps {
+  onSetServicePoint: (point: ServicePoint) => void;
+  currentPoint: ServicePoint | null;
+}
+
+export function ServicePointConfig({ onSetServicePoint, currentPoint }: ServicePointConfigProps) {
+  const [latitude, setLatitude] = useState(currentPoint?.latitude.toString() || '');
+  const [longitude, setLongitude] = useState(currentPoint?.longitude.toString() || '');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+
+    // Validación
+    if (isNaN(lat) || isNaN(lng)) {
+      alert('Por favor ingresa coordenadas válidas');
+      return;
+    }
+
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      alert('Coordenadas fuera de rango válido');
+      return;
+    }
+
+    onSetServicePoint({ latitude: lat, longitude: lng });
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <MapPin className="text-blue-600" size={24} />
+        <h2 className="text-xl font-semibold text-gray-800">
+          Configuración del Punto de Servicio
+        </h2>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-1">
+            Latitud
+          </label>
+          <input
+            type="text"
+            id="latitude"
+            value={latitude}
+            onChange={(e) => setLatitude(e.target.value)}
+            placeholder="Ej: 19.432608"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-1">
+            Longitud
+          </label>
+          <input
+            type="text"
+            id="longitude"
+            value={longitude}
+            onChange={(e) => setLongitude(e.target.value)}
+            placeholder="Ej: -99.133209"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2">
+          <Save size={20} />
+          Fijar Destino
+        </button>
+      </form>
+
+      {currentPoint && (
+        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800">
+            <strong>Destino Configurado:</strong><br />
+            Lat: {currentPoint.latitude.toFixed(6)}, Lng: {currentPoint.longitude.toFixed(6)}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+CheckInButton.tsx
+Maneja la lógica principal del check-in con validación de geocerca.
+
+Constante clave:
+
+
+const GEOFENCE_RADIUS = 200; // Radio en metros
+Lógica de validación:
+
+
+const handleCheckIn = async () => {
+  // 1. Obtener ubicación actual del usuario
+  const userLocation = await getCurrentLocation();
+  
+  // 2. Calcular distancia usando Haversine
+  const distance = calculateDistance(userLocation, servicePoint);
+  
+  // 3. Validar si está dentro del radio
+  const success = distance <= GEOFENCE_RADIUS;
+  
+  // 4. Crear log del intento
+  const log: CheckInLog = {
+    id: Date.now().toString(),
+    timestamp: new Date(),
+    userLocation,
+    servicePoint,
+    distance,
+    success,
+  };
+  
+  // 5. Notificar resultado
+  if (success) {
+    alert(`✓ Check-In exitoso! Estás a ${distance.toFixed(0)} metros.`);
+  } else {
+    alert(`✗ Check-In denegado. Estás a ${distance.toFixed(0)} metros. Debes estar dentro de ${GEOFENCE_RADIUS} metros.`);
+  }
+};
+MapView.tsx
+Visualización del mapa usando OpenStreetMap con marcadores y línea conectora dibujados con SVG.
+
+Lógica principal:
+
+Cálculo de Bounds: Determina el área del mapa basándose en ambos puntos
+iframe de OpenStreetMap: Renderiza el mapa base
+SVG Overlay: Dibuja marcadores y líneas sobre el mapa
+
+// Cálculo de posiciones SVG
+const latToY = (lat: number) => 
+  ((bounds.maxLat - lat) / (bounds.maxLat - bounds.minLat)) * 100;
+
+const lonToX = (lon: number) => 
+  ((lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)) * 100;
+
+// Línea conectora (si hay ubicación del usuario)
+<line
+  x1={lonToX(servicePoint.longitude)}
+  y1={latToY(servicePoint.latitude)}
+  x2={lonToX(userLocation.longitude)}
+  y2={latToY(userLocation.latitude)}
+  stroke="#0066ff"
+  stroke-width="0.5"
+  stroke-dasharray="2,1"  // Línea punteada
+/>
+ActivityLogs.tsx
+Muestra el historial completo de intentos de check-in con detalles.
+
+Formato de logs:
+
+Timestamp formateado
+Estado (exitoso/denegado)
+Distancia calculada
+Coordenadas de usuario y punto de servicio
+Estilo visual diferenciado (verde para éxito, rojo para fallo)
+7. App Principal
+src/App.tsx
+
+
+import { useState } from 'react';
+import { Target } from 'lucide-react';
+import { ServicePointConfig } from './components/ServicePointConfig';
+import { CheckInButton } from './components/CheckInButton';
+import { MapView } from './components/MapView';
+import { ActivityLogs } from './components/ActivityLogs';
+import { ServicePoint, CheckInLog } from './types';
+
+function App() {
+  const [servicePoint, setServicePoint] = useState<ServicePoint | null>(null);
+  const [logs, setLogs] = useState<CheckInLog[]>([]);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+
+  const handleCheckIn = (log: CheckInLog) => {
+    setLogs((prev) => [log, ...prev]);
+    if (log.success) {
+      setIsCheckedIn(true);
+    }
+  };
+
+  const userLocation = logs.length > 0 ? logs[0].userLocation : null;
+
+  return (
+    // Layout con grid responsive
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <header>...</header>
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-2 gap-6 mb-6">
+          <ServicePointConfig onSetServicePoint={setServicePoint} currentPoint={servicePoint} />
+          <CheckInButton servicePoint={servicePoint} onCheckIn={handleCheckIn} isCheckedIn={isCheckedIn} />
+        </div>
+        <div className="grid lg:grid-cols-2 gap-6">
+          <MapView servicePoint={servicePoint} userLocation={userLocation} />
+          <ActivityLogs logs={logs} />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default App;
+8. Flujo de Funcionamiento
+Usuario configura punto de servicio → Ingresa lat/lng → Se guarda en estado
+Usuario presiona "Hacer Check-In" → Se solicita ubicación GPS
+Sistema obtiene ubicación → HTML5 Geolocation API con alta precisión
+Cálculo de distancia → Fórmula de Haversine retorna metros exactos
+Validación de geocerca → Compara distancia vs 200m
+Resultado → Éxito (≤200m) o Denegado (>200m)
+Actualización visual → Mapa muestra ambos puntos + línea + distancia
+Log guardado → Historial con todos los detalles
+9. Características Técnicas
+Precisión GPS: enableHighAccuracy: true - Usa GPS real del dispositivo
+Radio de Geocerca: 200 metros (configurable en GEOFENCE_RADIUS)
+Algoritmo de distancia: Haversine (precisión en superficie esférica)
+Mapa: OpenStreetMap (sin API keys necesarias)
+Responsive: Grid adaptativo para móviles y desktop
+TypeScript: Tipado estricto en todo el código
+Sin dependencias externas de mapas: Solo OpenStreetMap embebido
+10. Comandos para Iniciar
+
+# Instalar dependencias
+npm install
+
+# Desarrollo
+npm run dev
+
+# Build producción
+npm run build
+
+# Preview build
+npm run preview
+Esta es la documentación completa
