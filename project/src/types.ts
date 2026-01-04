@@ -150,6 +150,17 @@ export interface AuthState {
   loading: boolean;
 }
 
+export interface CheckInAttempt {
+  id?: number;
+  appointment_name: string;
+  attempt_timestamp?: string;
+  latitude: number;
+  longitude: number;
+  distance_meters: number;
+  was_successful: boolean;
+  geofence_radius: number;
+}
+
 export interface DeviceChangeData {
   nuevoESN: string;
   motivo: string;

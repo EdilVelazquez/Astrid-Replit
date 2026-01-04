@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MapPin, Navigation, CheckCircle, XCircle, Loader2, X, AlertTriangle } from 'lucide-react';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { isWithinGeofence, Coordinates } from '../utils/haversine';
-import { ExpedienteServicio } from '../types';
+import { ExpedienteServicio, CheckInAttempt } from '../types';
 import { supabase } from '../supabaseClient';
 
 const GEOFENCE_RADIUS = 200;
@@ -29,9 +29,42 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       ? { latitude: servicio.service_latitude, longitude: servicio.service_longitude }
       : null;
 
+  const saveCheckInAttempt = async (
+    appointmentName: string,
+    latitude: number,
+    longitude: number,
+    distanceMeters: number,
+    wasSuccessful: boolean
+  ): Promise<boolean> => {
+    const attempt: Omit<CheckInAttempt, 'id' | 'attempt_timestamp'> = {
+      appointment_name: appointmentName,
+      latitude,
+      longitude,
+      distance_meters: distanceMeters,
+      was_successful: wasSuccessful,
+      geofence_radius: GEOFENCE_RADIUS
+    };
+
+    const { error } = await supabase
+      .from('check_in_attempts')
+      .insert(attempt);
+
+    if (error) {
+      console.error('Error saving check-in attempt:', error);
+      return false;
+    }
+    return true;
+  };
+
   const handleCheckIn = async () => {
     if (!servicePoint) {
       setCheckInState('no_coords');
+      return;
+    }
+
+    if (!servicio.appointment_name) {
+      console.error('No appointment_name available');
+      setCheckInState('error');
       return;
     }
 
@@ -42,6 +75,14 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       
       const result = isWithinGeofence(userLocation, servicePoint, GEOFENCE_RADIUS);
       setDistance(result.distance);
+
+      await saveCheckInAttempt(
+        servicio.appointment_name,
+        userLocation.latitude,
+        userLocation.longitude,
+        result.distance,
+        result.isWithin
+      );
 
       if (result.isWithin) {
         setSaving(true);
