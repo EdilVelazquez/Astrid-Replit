@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ExpedienteServicio } from '../types';
-import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2, Car, Wrench, User } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2, Car, Wrench, User, Navigation } from 'lucide-react';
 import { ConfirmModal } from './ui/Modal';
+import { CheckInModal } from './CheckInModal';
 
 function formatearFechaLocal(fecha: Date): string {
   const year = fecha.getFullYear();
@@ -39,6 +40,12 @@ export default function CalendarioTecnico({
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('todos');
   const [modoVisualizacion, setModoVisualizacion] = useState<ModoVisualizacion>('tarjeta');
   const [servicioConfirmacion, setServicioConfirmacion] = useState<ExpedienteServicio | null>(null);
+  const [servicioCheckIn, setServicioCheckIn] = useState<ExpedienteServicio | null>(null);
+  const [serviciosConCheckIn, setServiciosConCheckIn] = useState<Set<number>>(new Set());
+
+  const handleCheckInSuccess = (servicioActualizado: ExpedienteServicio) => {
+    setServiciosConCheckIn(prev => new Set([...prev, servicioActualizado.id]));
+  };
 
   const esHoy = (fecha: Date): boolean => {
     const hoy = new Date();
@@ -363,7 +370,8 @@ export default function CalendarioTecnico({
             puedeIniciar={puedeIniciarServicio(servicio)}
             onSeleccionar={onSeleccionarServicio}
             onIniciarServicio={setServicioConfirmacion}
-            formatearHora={formatearHora}
+            onCheckIn={setServicioCheckIn}
+            checkInRealizado={serviciosConCheckIn.has(servicio.id)}
           />
         ))}
       </div>
@@ -544,6 +552,15 @@ export default function CalendarioTecnico({
         cancelText="Cancelar"
         variant="confirm"
       />
+
+      {servicioCheckIn && (
+        <CheckInModal
+          isOpen={!!servicioCheckIn}
+          onClose={() => setServicioCheckIn(null)}
+          servicio={servicioCheckIn}
+          onCheckInSuccess={handleCheckInSuccess}
+        />
+      )}
     </div>
   );
 }
@@ -554,14 +571,16 @@ function TarjetaServicio({
   puedeIniciar,
   onSeleccionar,
   onIniciarServicio,
-  formatearHora
+  onCheckIn,
+  checkInRealizado = false
 }: {
   servicio: ExpedienteServicio;
   estado: EstadoServicio;
   puedeIniciar: boolean;
   onSeleccionar: (servicio: ExpedienteServicio) => void;
   onIniciarServicio: (servicio: ExpedienteServicio) => void;
-  formatearHora: (fecha: string) => string;
+  onCheckIn: (servicio: ExpedienteServicio) => void;
+  checkInRealizado?: boolean;
 }) {
   const handleIniciarServicio = () => {
     if (!puedeIniciar) return;
@@ -569,6 +588,8 @@ function TarjetaServicio({
   };
 
   const esEnCurso = estado.estado === 'en_curso';
+  const yaHizoCheckIn = !!servicio.check_in_timestamp || checkInRealizado;
+  const puedeHacerCheckIn = puedeIniciar && estado.estado === 'pendiente' && !yaHizoCheckIn;
 
   const getStatusIndicator = () => {
     if (estado.estado === 'completado') return { color: 'bg-gray-400', label: 'Completado' };
@@ -625,7 +646,7 @@ function TarjetaServicio({
               )}
             </div>
 
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex items-center gap-2">
               {esEnCurso && (
                 <button
                   onClick={() => onSeleccionar(servicio)}
@@ -633,6 +654,22 @@ function TarjetaServicio({
                 >
                   Reanudar
                 </button>
+              )}
+              {puedeHacerCheckIn && (
+                <button
+                  onClick={() => onCheckIn(servicio)}
+                  className="px-3 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5"
+                  title="Confirmar llegada al punto de servicio"
+                >
+                  <Navigation className="w-4 h-4" />
+                  Check-In
+                </button>
+              )}
+              {yaHizoCheckIn && estado.estado === 'pendiente' && (
+                <span className="px-3 py-2 bg-emerald-100 text-emerald-700 text-sm font-medium rounded-lg flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Llegada confirmada
+                </span>
               )}
               {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
                 <button

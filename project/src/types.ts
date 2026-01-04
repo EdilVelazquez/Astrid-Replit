@@ -57,6 +57,10 @@ export interface ExpedienteServicio {
   prefolio_telefono_sim?: string | null;
   zoho_inventory_id?: string | null;
   is_test_service?: boolean;
+  check_in_timestamp?: string | null;
+  check_in_latitude?: number | null;
+  check_in_longitude?: number | null;
+  check_in_distance?: number | null;
 }
 
 export interface ValidationSummaryJSON {
