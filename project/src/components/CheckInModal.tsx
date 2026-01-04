@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { MapPin, Navigation, CheckCircle, XCircle, Loader2, X, AlertTriangle } from 'lucide-react';
+import { Navigation, CheckCircle, XCircle, Loader2, X, AlertTriangle } from 'lucide-react';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { isWithinGeofence, Coordinates } from '../utils/haversine';
 import { ExpedienteServicio, CheckInAttempt } from '../types';
 import { supabase } from '../supabaseClient';
+import { MapView } from './MapView';
 
 const GEOFENCE_RADIUS = 200;
 
@@ -21,6 +22,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
   const [checkInState, setCheckInState] = useState<CheckInState>('idle');
   const [distance, setDistance] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
 
   if (!isOpen) return null;
 
@@ -71,15 +73,16 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setCheckInState('requesting');
     
     try {
-      const userLocation = await getCurrentLocation();
+      const location = await getCurrentLocation();
+      setUserLocation(location);
       
-      const result = isWithinGeofence(userLocation, servicePoint, GEOFENCE_RADIUS);
+      const result = isWithinGeofence(location, servicePoint, GEOFENCE_RADIUS);
       setDistance(result.distance);
 
       await saveCheckInAttempt(
         servicio.appointment_name,
-        userLocation.latitude,
-        userLocation.longitude,
+        location.latitude,
+        location.longitude,
         result.distance,
         result.isWithin
       );
@@ -91,8 +94,8 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
           .from('expedientes_servicio')
           .update({
             check_in_timestamp: new Date().toISOString(),
-            check_in_latitude: userLocation.latitude,
-            check_in_longitude: userLocation.longitude,
+            check_in_latitude: location.latitude,
+            check_in_longitude: location.longitude,
             check_in_distance: result.distance
           })
           .eq('id', servicio.id);
@@ -110,8 +113,8 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
         const updatedServicio = {
           ...servicio,
           check_in_timestamp: new Date().toISOString(),
-          check_in_latitude: userLocation.latitude,
-          check_in_longitude: userLocation.longitude,
+          check_in_latitude: location.latitude,
+          check_in_longitude: location.longitude,
           check_in_distance: result.distance
         };
         
@@ -131,6 +134,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
   const handleClose = () => {
     setCheckInState('idle');
     setDistance(null);
+    setUserLocation(null);
     resetState();
     onClose();
   };
@@ -138,6 +142,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
   const handleRetry = () => {
     setCheckInState('idle');
     setDistance(null);
+    setUserLocation(null);
     resetState();
   };
 
@@ -181,38 +186,54 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
 
     if (checkInState === 'success') {
       return (
-        <div className="text-center py-6">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+        <div className="py-4">
+          <div className="text-center mb-4">
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-bold text-green-800 mb-1">
+              Check-In Exitoso
+            </h3>
+            <p className="text-green-600 text-sm">
+              Tu llegada ha sido registrada correctamente.
+            </p>
           </div>
-          <h3 className="text-xl font-bold text-green-800 mb-2">
-            Check-In Exitoso
-          </h3>
-          <p className="text-gray-600 mb-2">
-            Estás a <span className="font-semibold">{distance} metros</span> del punto de servicio.
-          </p>
-          <p className="text-green-600 text-sm">
-            Tu llegada ha sido registrada correctamente.
-          </p>
+          {servicePoint && userLocation && (
+            <div className="mb-4">
+              <MapView 
+                servicePoint={servicePoint} 
+                userLocation={userLocation}
+                distance={distance}
+              />
+            </div>
+          )}
         </div>
       );
     }
 
     if (checkInState === 'denied') {
       return (
-        <div className="text-center py-6">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <XCircle className="w-10 h-10 text-red-600" />
+        <div className="py-4">
+          <div className="text-center mb-4">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <XCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-red-800 mb-1">
+              Check-In Denegado
+            </h3>
+            <p className="text-gray-500 text-sm">
+              Acércate más al punto de servicio para hacer check-in.
+            </p>
           </div>
-          <h3 className="text-xl font-bold text-red-800 mb-2">
-            Check-In Denegado
-          </h3>
-          <p className="text-gray-600 mb-2">
-            Estás a <span className="font-semibold text-red-600">{distance} metros</span> del punto de servicio.
-          </p>
-          <p className="text-gray-500 text-sm mb-4">
-            Debes estar dentro de <span className="font-medium">{GEOFENCE_RADIUS} metros</span> para hacer check-in.
-          </p>
+          {servicePoint && userLocation && (
+            <div className="mb-4">
+              <MapView 
+                servicePoint={servicePoint} 
+                userLocation={userLocation}
+                distance={distance}
+              />
+            </div>
+          )}
           <div className="flex gap-3 justify-center">
             <button
               onClick={handleRetry}
@@ -264,30 +285,36 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
 
     return (
       <div className="py-4">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MapPin className="w-8 h-8 text-blue-600" />
-          </div>
+        <div className="text-center mb-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             Confirmar llegada al servicio
           </h3>
           <p className="text-gray-600 text-sm">
-            Se verificará que estés dentro de {GEOFENCE_RADIUS} metros del punto de servicio.
+            Se verificará tu ubicación respecto al punto de servicio.
           </p>
         </div>
 
         {servicePoint && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-500 mb-1">Punto de servicio:</p>
-            <p className="text-sm font-medium text-gray-800">
-              {servicio.service_street || 'Dirección no especificada'}
-            </p>
-            {servicio.service_city && (
-              <p className="text-sm text-gray-600">
-                {servicio.service_city}, {servicio.service_state}
+          <>
+            <div className="mb-4">
+              <MapView 
+                servicePoint={servicePoint} 
+                userLocation={userLocation}
+                distance={distance}
+              />
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <p className="text-xs text-gray-500 mb-1">Punto de servicio:</p>
+              <p className="text-sm font-medium text-gray-800">
+                {servicio.service_street || 'Dirección no especificada'}
               </p>
-            )}
-          </div>
+              {servicio.service_city && (
+                <p className="text-xs text-gray-600">
+                  {servicio.service_city}, {servicio.service_state}
+                </p>
+              )}
+            </div>
+          </>
         )}
 
         <button
