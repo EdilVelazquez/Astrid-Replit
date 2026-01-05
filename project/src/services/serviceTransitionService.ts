@@ -7,6 +7,7 @@ export interface TransitionWebhookParams {
   work_order_name?: string;
   esn?: string;
   technician_email?: string;
+  company_Id?: string;
   asset_data?: {
     vin?: string;
     vin_original?: string;
@@ -99,6 +100,7 @@ export async function notificarInicioTrabajo(params: {
   work_order_name: string;
   esn: string;
   technician_email: string;
+  company_Id?: string;
 }): Promise<TransitionWebhookResponse> {
   return enviarTransicionServicio({
     action: 'start_work',
@@ -114,6 +116,7 @@ export async function notificarTrabajoCompletado(params: {
   work_order_name: string;
   esn: string;
   technician_email: string;
+  company_Id?: string;
 }): Promise<TransitionWebhookResponse> {
   return enviarTransicionServicio({
     action: 'complete_work',
@@ -130,6 +133,7 @@ export async function notificarCreacionAsset(params: {
   work_order_name: string;
   esn: string;
   technician_email: string;
+  company_Id?: string;
   asset_data: {
     vin: string;
     vin_original: string;
@@ -157,6 +161,7 @@ export async function notificarEdicionAsset(params: {
   work_order_name: string;
   esn: string;
   technician_email: string;
+  company_Id?: string;
   asset_data: {
     vin?: string;
     placas?: string;

@@ -89,6 +89,14 @@ project/
 - `create_asset` - Cuando VIN escaneado difiere del original
 - `edit_asset` - Cuando otros datos del vehículo cambian
 
+### Campos comunes en todos los webhooks
+- `action` - Tipo de acción (start_work, complete_work, create_asset, edit_asset)
+- `appointment_name` - Nombre de la cita
+- `work_order_name` - Nombre de la orden de trabajo
+- `esn` - ESN del dispositivo
+- `technician_email` - Email del técnico
+- `company_Id` - ID de la empresa (desde BD Supabase)
+
 ## Notas de Desarrollo
 - La app requiere conexión a un proyecto Supabase externo existente
 - Las migraciones en `/supabase/migrations/` definen el esquema de BD

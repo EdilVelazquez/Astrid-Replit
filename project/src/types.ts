@@ -14,6 +14,7 @@ export interface ExpedienteServicio {
   asset_placas: string | null;
   asset_color: string | null;
   company_name: string | null;
+  company_Id: string | null;
   client_name: string | null;
   technician_name: string | null;
   technician_phone: string | null;
