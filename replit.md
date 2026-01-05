@@ -51,9 +51,14 @@ project/
 ### Paso 1: Inicio de Servicio
 1. Técnico inicia sesión (Supabase Auth)
 2. Ve calendario con servicios asignados
-3. Hace clic en botón "Iniciar servicio" (requiere confirmación)
-4. Webhook `start_work` enviado
-5. Completa formulario de prefolio:
+3. **Check-In con Geocerca**: Técnico hace clic en "Check-In" para confirmar llegada
+   - Obtiene ubicación GPS del dispositivo
+   - Valida que esté dentro de 200 metros del punto de servicio (usando coordenadas service_latitude/service_longitude)
+   - Guarda timestamp, coordenadas y distancia en la BD
+   - Muestra badge "Llegada confirmada" si exitoso
+4. Hace clic en botón "Iniciar servicio" (requiere confirmación)
+5. Webhook `start_work` enviado
+6. Completa formulario de prefolio:
    - Escanea ESN, VIN, placa
    - Toma fotos obligatorias
    - Si VIN cambió → webhook `create_asset`

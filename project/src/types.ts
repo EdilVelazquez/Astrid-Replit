@@ -57,6 +57,10 @@ export interface ExpedienteServicio {
   prefolio_telefono_sim?: string | null;
   zoho_inventory_id?: string | null;
   is_test_service?: boolean;
+  check_in_timestamp?: string | null;
+  check_in_latitude?: number | null;
+  check_in_longitude?: number | null;
+  check_in_distance?: number | null;
 }
 
 export interface ValidationSummaryJSON {
@@ -144,6 +148,17 @@ export interface AuthState {
   user: UserProfile | null;
   session: any | null;
   loading: boolean;
+}
+
+export interface CheckInAttempt {
+  id?: number;
+  appointment_name: string;
+  attempt_timestamp?: string;
+  latitude: number;
+  longitude: number;
+  distance_meters: number;
+  was_successful: boolean;
+  geofence_radius: number;
 }
 
 export interface DeviceChangeData {
