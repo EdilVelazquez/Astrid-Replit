@@ -63,5 +63,5 @@ API_METRICS_KEY = "ded7fa10241361069b7c095016135a3a2a8b9e1d4d905b5dd1ef693dc27cb
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["node", "server.js"]
-build = ["npm", "run", "build"]
+run = ["bash", "-c", "cd project && node server.js"]
+build = ["bash", "-c", "cd project && npm run build"]
