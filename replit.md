@@ -51,12 +51,13 @@ project/
 ### Paso 1: Inicio de Servicio
 1. Técnico inicia sesión (Supabase Auth)
 2. Ve calendario con servicios asignados
-3. **Check-In con Geocerca**: Técnico hace clic en "Check-In" para confirmar llegada
+3. **Check-In con Geocerca (OBLIGATORIO)**: Técnico hace clic en "Check-In" para confirmar llegada
    - Obtiene ubicación GPS del dispositivo
    - Valida que esté dentro de 200 metros del punto de servicio (usando coordenadas service_latitude/service_longitude)
-   - Guarda timestamp, coordenadas y distancia en la BD
+   - Guarda timestamp, coordenadas y distancia en expedientes_servicio (check_in_timestamp, check_in_latitude, check_in_longitude, check_in_distance)
    - Muestra badge "Llegada confirmada" si exitoso
-4. Hace clic en botón "Iniciar servicio" (requiere confirmación)
+   - **Servicios de prueba**: Citas que inician con "AP-TEST-" o tienen is_test_service=true omiten validación de geocerca pero registran check-in
+4. Hace clic en botón "Iniciar servicio" (SOLO disponible después de Check-In exitoso)
 5. Webhook `start_work` enviado
 6. Completa formulario de prefolio:
    - Escanea ESN, VIN, placa
