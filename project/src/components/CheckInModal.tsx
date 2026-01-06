@@ -109,21 +109,24 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       if (result.isWithin) {
         setSaving(true);
         
+        const checkInData: Record<string, unknown> = {
+          check_in_timestamp: new Date().toISOString()
+        };
+
         const { error } = await supabase
           .from('expedientes_servicio')
-          .update({
-            check_in_timestamp: new Date().toISOString(),
-            check_in_latitude: location.latitude,
-            check_in_longitude: location.longitude,
-            check_in_distance: result.distance
-          })
+          .update(checkInData)
           .eq('id', servicio.id);
 
         if (error) {
           console.error('Error saving check-in:', error);
-          setCheckInState('error');
-          setSaving(false);
-          return;
+          if (isTestService) {
+            console.log('🧪 [CHECK-IN] Servicio de prueba - continuando a pesar del error de BD');
+          } else {
+            setCheckInState('error');
+            setSaving(false);
+            return;
+          }
         }
 
         setSaving(false);
@@ -131,10 +134,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
         
         const updatedServicio = {
           ...servicio,
-          check_in_timestamp: new Date().toISOString(),
-          check_in_latitude: location.latitude,
-          check_in_longitude: location.longitude,
-          check_in_distance: result.distance
+          check_in_timestamp: new Date().toISOString()
         };
         
         setTimeout(() => {
@@ -272,7 +272,8 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       );
     }
 
-    if (checkInState === 'error' || gpsStatus === 'error' || gpsStatus === 'denied') {
+    const gpsHasError = !isTestService && (gpsStatus === 'error' || gpsStatus === 'denied');
+    if (checkInState === 'error' || gpsHasError) {
       return (
         <div className="text-center py-6">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
