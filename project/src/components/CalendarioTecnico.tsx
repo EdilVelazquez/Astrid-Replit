@@ -66,43 +66,43 @@ export default function CalendarioTecnico({
     if (fechaServicio && esFuturo(fechaServicio)) {
       return {
         estado: 'bloqueado',
-        color: 'bg-gray-100',
-        colorTexto: 'text-gray-600',
+        color: 'bg-gray-50',
+        colorTexto: 'text-gray-500',
         icono: <Lock className="w-4 h-4" />,
-        colorEvento: 'bg-gray-400',
-        colorTextoEvento: 'text-gray-900'
+        colorEvento: 'bg-gray-100 border border-gray-200',
+        colorTextoEvento: 'text-gray-500'
       };
     }
 
     if (servicio.validation_final_status === 'COMPLETADO') {
       return {
         estado: 'completado',
-        color: 'bg-green-100',
-        colorTexto: 'text-green-800',
+        color: 'bg-emerald-50',
+        colorTexto: 'text-emerald-700',
         icono: <CheckCircle2 className="w-4 h-4" />,
-        colorEvento: 'bg-green-500',
-        colorTextoEvento: 'text-white'
+        colorEvento: 'bg-emerald-50 border border-emerald-200',
+        colorTextoEvento: 'text-emerald-700'
       };
     }
 
     if (servicio.validation_start_timestamp && !servicio.validation_end_timestamp) {
       return {
         estado: 'en_curso',
-        color: 'bg-blue-100',
-        colorTexto: 'text-blue-800',
+        color: 'bg-blue-50',
+        colorTexto: 'text-blue-700',
         icono: <Clock className="w-4 h-4" />,
-        colorEvento: 'bg-blue-500',
-        colorTextoEvento: 'text-white'
+        colorEvento: 'bg-blue-50 border border-blue-200',
+        colorTextoEvento: 'text-blue-700'
       };
     }
 
     return {
       estado: 'pendiente',
-      color: 'bg-yellow-100',
-      colorTexto: 'text-yellow-800',
+      color: 'bg-amber-50',
+      colorTexto: 'text-amber-700',
       icono: <AlertCircle className="w-4 h-4" />,
-      colorEvento: 'bg-yellow-500',
-      colorTextoEvento: 'text-gray-900'
+      colorEvento: 'bg-amber-50 border border-amber-200',
+      colorTextoEvento: 'text-amber-700'
     };
   };
 
@@ -299,18 +299,19 @@ export default function CalendarioTecnico({
               };
 
               const getEstadoIndicator = () => {
-                if (estado.estado === 'completado') return 'bg-gray-400';
-                if (estado.estado === 'en_curso') return 'bg-[#0F1C3F]';
-                if (estado.estado === 'pendiente') return 'bg-gray-300';
-                return 'bg-gray-200';
+                if (estado.estado === 'completado') return { stripe: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200' };
+                if (estado.estado === 'en_curso') return { stripe: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border border-blue-200' };
+                if (estado.estado === 'pendiente') return { stripe: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700 border border-amber-200' };
+                return { stripe: 'bg-gray-300', badge: 'bg-gray-50 text-gray-500 border border-gray-200' };
               };
+              const statusStyles = getEstadoIndicator();
 
               return (
                 <div 
                   key={servicio.id} 
                   className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
                 >
-                  <div className={`w-1.5 h-8 rounded-full ${getEstadoIndicator()}`} />
+                  <div className={`w-1.5 h-8 rounded-full ${statusStyles.stripe}`} />
                   
                   <div className="w-14 text-sm font-medium text-gray-900">
                     {servicio.scheduled_start_time ? formatearHora(servicio.scheduled_start_time) : '--:--'}
@@ -346,13 +347,10 @@ export default function CalendarioTecnico({
                         Check-In
                       </span>
                     ) : (
-                      <span className={`text-xs px-2 py-0.5 rounded-md ${
-                        estado.estado === 'completado' ? 'bg-gray-100 text-gray-500' :
-                        estado.estado === 'pendiente' ? 'bg-gray-100 text-gray-600' :
-                        'bg-gray-100 text-gray-400'
-                      }`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-md ${statusStyles.badge}`}>
                         {estado.estado === 'completado' ? 'Completado' :
                          estado.estado === 'pendiente' ? 'Pendiente' :
+                         estado.estado === 'en_curso' ? 'En curso' :
                          'Futuro'}
                       </span>
                     )}
@@ -597,10 +595,26 @@ function TarjetaServicio({
   const puedeHacerCheckIn = puedeIniciar && estado.estado === 'pendiente' && !yaHizoCheckIn;
 
   const getStatusIndicator = () => {
-    if (estado.estado === 'completado') return { color: 'bg-gray-400', label: 'Completado' };
-    if (estado.estado === 'en_curso') return { color: 'bg-[#0F1C3F]', label: 'En curso' };
-    if (estado.estado === 'pendiente') return { color: 'bg-gray-300', label: 'Pendiente' };
-    return { color: 'bg-gray-200', label: 'Futuro' };
+    if (estado.estado === 'completado') return { 
+      stripe: 'bg-emerald-400', 
+      badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+      label: 'Completado' 
+    };
+    if (estado.estado === 'en_curso') return { 
+      stripe: 'bg-blue-500', 
+      badge: 'bg-blue-50 text-blue-700 border border-blue-200',
+      label: 'En curso' 
+    };
+    if (estado.estado === 'pendiente') return { 
+      stripe: 'bg-amber-400', 
+      badge: 'bg-amber-50 text-amber-700 border border-amber-200',
+      label: 'Pendiente' 
+    };
+    return { 
+      stripe: 'bg-gray-300', 
+      badge: 'bg-gray-50 text-gray-500 border border-gray-200',
+      label: 'Futuro' 
+    };
   };
 
   const statusInfo = getStatusIndicator();
@@ -623,7 +637,7 @@ function TarjetaServicio({
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-gray-300 transition-all">
       <div className="flex">
-        <div className={`w-1 ${statusInfo.color}`} />
+        <div className={`w-1 ${statusInfo.stripe}`} />
         
         <div className="flex-1 p-4">
           <div className="flex items-start justify-between gap-4 mb-4">
@@ -632,9 +646,7 @@ function TarjetaServicio({
                 <h3 className="text-base font-semibold text-gray-900 truncate">
                   {servicio.appointment_name || 'Sin número de cita'}
                 </h3>
-                <span className={`px-2 py-0.5 text-xs font-medium rounded-md ${
-                  estado.estado === 'en_curso' ? 'bg-[#0F1C3F] text-white' : 'bg-gray-100 text-gray-600'
-                }`}>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-md ${statusInfo.badge}`}>
                   {statusInfo.label}
                 </span>
                 {servicio.is_test_service && (
