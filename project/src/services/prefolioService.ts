@@ -1,7 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { PrefolioDatos, PrefolioFoto } from '../types';
-
-const STORAGE_BUCKET = 'prefolio-photos';
+import { subirFotoUnificada, STORAGE_BUCKET } from './photoStorageService';
 
 const PHOTO_FIELD_NAMES = {
   VEHICULO_FRENTE: 'foto_vehiculo_frente',
@@ -97,50 +96,43 @@ export async function guardarPrefolioDatos(
 
 export async function subirFotoPrefolio(
   expedienteId: number,
+  appointmentName: string,
   campo: string,
   file: File
 ): Promise<{ success: boolean; filePath?: string; error?: string }> {
   try {
     console.log('📸 Subiendo foto:', {
       expedienteId,
+      appointmentName,
       campo,
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
     });
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const tipoMap: Record<string, { tipo: string; detalle: string }> = {
+      'foto_vehiculo_frente': { tipo: 'vehiculo', detalle: 'frente' },
+      'foto_vehiculo_costado_izquierdo': { tipo: 'vehiculo', detalle: 'costado_izq' },
+      'foto_vehiculo_costado_derecho': { tipo: 'vehiculo', detalle: 'costado_der' },
+      'foto_vehiculo_trasera': { tipo: 'vehiculo', detalle: 'trasera' },
+      'foto_odometro': { tipo: 'odometro', detalle: 'lectura' },
+      'foto_vin': { tipo: 'vin', detalle: 'escaneado' },
+      'foto_placas': { tipo: 'placas', detalle: 'frontal' },
+      'foto_tablero': { tipo: 'tablero', detalle: 'vista' },
+    };
 
-    if (!session) {
-      console.error('❌ No hay sesión activa');
-      return {
-        success: false,
-        error: 'Usuario no autenticado. Por favor inicia sesión nuevamente.',
-      };
+    const mapping = tipoMap[campo] || { tipo: campo, detalle: '' };
+    
+    const result = await subirFotoUnificada(
+      appointmentName,
+      file,
+      mapping.tipo,
+      mapping.detalle
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error };
     }
-
-    console.log('✓ Sesión verificada:', session.user.email);
-
-    const timestamp = Date.now();
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${timestamp}.${fileExt}`;
-    const filePath = `prefolio/${expedienteId}/${campo}/${fileName}`;
-
-    console.log('📤 Subiendo archivo a storage:', filePath);
-
-    const { error: uploadError } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (uploadError) {
-      console.error('❌ Error uploading file to storage:', uploadError);
-      return { success: false, error: uploadError.message };
-    }
-
-    console.log('✅ Archivo subido exitosamente a storage');
 
     console.log('💾 Guardando metadata en base de datos...');
 
@@ -149,7 +141,7 @@ export async function subirFotoPrefolio(
       .insert({
         expediente_id: expedienteId,
         campo,
-        file_path: filePath,
+        file_path: result.filePath,
       })
       .select();
 
@@ -161,14 +153,16 @@ export async function subirFotoPrefolio(
         code: dbError.code,
       });
 
-      console.log('🗑️ Eliminando archivo del storage debido al error...');
-      await supabase.storage.from(STORAGE_BUCKET).remove([filePath]);
+      if (result.filePath) {
+        console.log('🗑️ Eliminando archivo del storage debido al error...');
+        await supabase.storage.from(STORAGE_BUCKET).remove([result.filePath]);
+      }
 
       return { success: false, error: dbError.message };
     }
 
     console.log('✅ Metadata guardada correctamente:', insertData);
-    return { success: true, filePath };
+    return { success: true, filePath: result.filePath };
   } catch (error) {
     console.error('❌ Unexpected error in subirFotoPrefolio:', error);
     return {
@@ -180,6 +174,7 @@ export async function subirFotoPrefolio(
 
 export async function guardarPrefolioFotos(
   expedienteId: number,
+  appointmentName: string,
   fotosVehiculo: File[],
   fotoOdometro: File | null,
   fotoVin: File | null,
@@ -189,6 +184,7 @@ export async function guardarPrefolioFotos(
   try {
     console.log('📸 Iniciando guardado de todas las fotos:', {
       expedienteId,
+      appointmentName,
       numFotosVehiculo: fotosVehiculo.length,
       tieneFotoOdometro: !!fotoOdometro,
       tieneFotoVin: !!fotoVin,
@@ -208,7 +204,7 @@ export async function guardarPrefolioFotos(
     for (let i = 0; i < fotosVehiculo.length && i < vehiclePhotoFields.length; i++) {
       const campo = vehiclePhotoFields[i];
       console.log(`📸 Subiendo foto ${i + 1}/${fotosVehiculo.length}: ${campo}`);
-      const result = await subirFotoPrefolio(expedienteId, campo, fotosVehiculo[i]);
+      const result = await subirFotoPrefolio(expedienteId, appointmentName, campo, fotosVehiculo[i]);
       uploadResults.push({ success: result.success, campo, error: result.error });
 
       if (!result.success) {
@@ -220,6 +216,7 @@ export async function guardarPrefolioFotos(
       console.log('📸 Subiendo foto del odómetro...');
       const result = await subirFotoPrefolio(
         expedienteId,
+        appointmentName,
         PHOTO_FIELD_NAMES.ODOMETRO,
         fotoOdometro
       );
@@ -238,6 +235,7 @@ export async function guardarPrefolioFotos(
       console.log('📸 Subiendo foto del VIN...');
       const result = await subirFotoPrefolio(
         expedienteId,
+        appointmentName,
         PHOTO_FIELD_NAMES.VIN,
         fotoVin
       );
@@ -256,6 +254,7 @@ export async function guardarPrefolioFotos(
       console.log('📸 Subiendo foto de las placas...');
       const result = await subirFotoPrefolio(
         expedienteId,
+        appointmentName,
         PHOTO_FIELD_NAMES.PLACAS,
         fotoPlacas
       );
@@ -274,6 +273,7 @@ export async function guardarPrefolioFotos(
       console.log('📸 Subiendo foto del tablero...');
       const result = await subirFotoPrefolio(
         expedienteId,
+        appointmentName,
         PHOTO_FIELD_NAMES.TABLERO,
         fotoTablero
       );

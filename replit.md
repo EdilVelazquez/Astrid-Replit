@@ -97,6 +97,33 @@ project/
 - `technician_email` - Email del técnico
 - `company_Id` - ID de la empresa (desde BD Supabase)
 
+## Almacenamiento de Fotos (Unificado)
+Todas las fotos de un servicio se almacenan en una sola carpeta en Supabase Storage.
+
+### Estructura
+```
+prefolio-photos/
+└── servicios/
+    └── {APPOINTMENT_NAME}/
+        ├── {APPOINTMENT_NAME}_vehiculo_frente_20251230-093012.jpg
+        ├── {APPOINTMENT_NAME}_vin_escaneado_20251230-093045.jpg
+        ├── {APPOINTMENT_NAME}_odometro_lectura_20251230-093120.jpg
+        ├── {APPOINTMENT_NAME}_instalacion_equipo_20251230-094010.jpg
+        ├── {APPOINTMENT_NAME}_conexion_corriente_20251230-094015.jpg
+        ├── {APPOINTMENT_NAME}_conexion_ignicion_corte_20251230-094020.jpg
+        ├── {APPOINTMENT_NAME}_firma_cliente_20251230-101530.jpg
+        ├── {APPOINTMENT_NAME}_receptor_cliente_foto_20251230-101545.jpg
+        └── ...
+```
+
+### Convención de nombres
+`{APPOINTMENT_NAME}_{tipo}_{detalle}_{YYYYMMDD-HHMMSS}.jpg`
+
+### Tipos de fotos
+- **Prefolio**: vehiculo (frente/costado_izq/costado_der/trasera), vin, odometro, placas, tablero
+- **Cierre**: instalacion, conexion (corriente/tierra/ignicion/ignicion_corte), boton (panico)
+- **Documentación**: firma (cliente), receptor (cliente_foto), adicional (descripción personalizada)
+
 ## Notas de Desarrollo
 - La app requiere conexión a un proyecto Supabase externo existente
 - Las migraciones en `/supabase/migrations/` definen el esquema de BD

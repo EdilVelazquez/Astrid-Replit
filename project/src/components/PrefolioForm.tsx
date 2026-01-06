@@ -558,6 +558,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
 
       const resultadoFotos = await guardarPrefolioFotos(
         expediente.id,
+        expediente.appointment_name || '',
         fotosVehiculo,
         fotoOdometro,
         fotoVin,

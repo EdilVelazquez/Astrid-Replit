@@ -171,11 +171,15 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
     try {
       console.log('📝 [CIERRE] Guardando datos del formulario de cierre...');
 
-      const resultadoDatos = await guardarCierreDatosParciales(expediente.id, {
-        tipo_corte: tipoCorte,
-        nombre_recibe: nombreRecibe.trim(),
-        firma_data_url: firmaDataUrl!,
-      });
+      const resultadoDatos = await guardarCierreDatosParciales(
+        expediente.id,
+        expediente.appointment_name || '',
+        {
+          tipo_corte: tipoCorte,
+          nombre_recibe: nombreRecibe.trim(),
+          firma_data_url: firmaDataUrl!,
+        }
+      );
 
       if (!resultadoDatos.success) {
         setError(`Error al guardar datos: ${resultadoDatos.error}`);
@@ -195,6 +199,7 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
 
       const resultadoFotos = await guardarCierreFotos(
         expediente.id,
+        expediente.appointment_name || '',
         fotosObligatoriasParaSubir,
         fotosAdicionalesParaSubir,
         fotoPersonaRecibe

@@ -1,6 +1,5 @@
 import { supabase } from '../supabaseClient';
-
-const STORAGE_BUCKET = 'prefolio-photos';
+import { subirFotoUnificada } from './photoStorageService';
 
 export interface CierreDatos {
   tipo_corte: string;
@@ -19,51 +18,61 @@ export interface FotoAdicionalCierre {
   fotos: File[];
 }
 
-async function subirFotoStorage(
-  expedienteId: number,
-  archivo: File,
-  tipo: string
-): Promise<string | null> {
-  try {
-    const extension = archivo.name.split('.').pop() || 'jpg';
-    const timestamp = Date.now();
-    const nombreArchivo = `${expedienteId}/${tipo}_${timestamp}.${extension}`;
+const TIPO_FOTO_MAP: Record<string, { tipo: string; detalle: string }> = {
+  'instalacion': { tipo: 'instalacion', detalle: 'equipo' },
+  'corriente': { tipo: 'conexion', detalle: 'corriente' },
+  'tierra': { tipo: 'conexion', detalle: 'tierra' },
+  'ignicion': { tipo: 'conexion', detalle: 'ignicion' },
+  'ignicionCorte': { tipo: 'conexion', detalle: 'ignicion_corte' },
+  'botonPanico': { tipo: 'boton', detalle: 'panico' },
+};
 
-    const { data, error } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(nombreArchivo, archivo, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (error) {
-      console.error(`Error al subir foto ${tipo}:`, error);
-      return null;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from(STORAGE_BUCKET)
-      .getPublicUrl(data.path);
-
-    return urlData.publicUrl;
-  } catch (err) {
-    console.error(`Error inesperado al subir foto ${tipo}:`, err);
-    return null;
+function dataURLtoBlob(dataURL: string): Blob {
+  const parts = dataURL.split(',');
+  const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
+  const bstr = atob(parts[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
   }
+  return new Blob([u8arr], { type: mime });
 }
 
 export async function guardarCierreDatosParciales(
   expedienteId: number,
+  appointmentName: string,
   datos: CierreDatos
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('📝 [CIERRE] Guardando datos parciales de cierre...', { expedienteId, datos });
+    console.log('📝 [CIERRE] Guardando datos parciales de cierre...', { expedienteId, appointmentName, datos });
+
+    let firmaUrl = datos.firma_data_url;
+    
+    if (datos.firma_data_url && datos.firma_data_url.startsWith('data:')) {
+      const blob = dataURLtoBlob(datos.firma_data_url);
+      const file = new File([blob], 'firma.png', { type: 'image/png' });
+      
+      const result = await subirFotoUnificada(
+        appointmentName,
+        file,
+        'firma',
+        'cliente'
+      );
+      
+      if (result.success && result.publicUrl) {
+        firmaUrl = result.publicUrl;
+        console.log('✅ [CIERRE] Firma subida al storage:', firmaUrl);
+      } else {
+        console.warn('⚠️ [CIERRE] No se pudo subir la firma al storage, guardando como data URL');
+      }
+    }
 
     const cierreData = {
       expediente_id: expedienteId,
       tipo_corte: datos.tipo_corte,
       nombre_recibe: datos.nombre_recibe,
-      firma_url: datos.firma_data_url,
+      firma_url: firmaUrl,
       updated_at: new Date().toISOString(),
     };
 
@@ -128,12 +137,13 @@ export async function marcarCierreCompletado(
 
 export async function guardarCierreFotos(
   expedienteId: number,
+  appointmentName: string,
   fotosObligatorias: FotoObligatoriaCierre[],
   fotosAdicionales: FotoAdicionalCierre[],
   fotoPersonaRecibe: File | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('📷 [CIERRE] Subiendo fotos de cierre...', { expedienteId });
+    console.log('📷 [CIERRE] Subiendo fotos de cierre...', { expedienteId, appointmentName });
 
     const urlsFotosObligatorias: Record<string, string> = {};
     const urlsFotosAdicionales: Array<{ descripcion: string; urls: string[] }> = [];
@@ -141,9 +151,15 @@ export async function guardarCierreFotos(
 
     for (const foto of fotosObligatorias) {
       if (foto.file) {
-        const url = await subirFotoStorage(expedienteId, foto.file, `obligatoria_${foto.id}`);
-        if (url) {
-          urlsFotosObligatorias[foto.id] = url;
+        const mapping = TIPO_FOTO_MAP[foto.id] || { tipo: foto.id, detalle: '' };
+        const result = await subirFotoUnificada(
+          appointmentName,
+          foto.file,
+          mapping.tipo,
+          mapping.detalle
+        );
+        if (result.success && result.publicUrl) {
+          urlsFotosObligatorias[foto.id] = result.publicUrl;
         } else {
           errores.push(`Error al subir foto: ${foto.label}`);
         }
@@ -159,13 +175,14 @@ export async function guardarCierreFotos(
       const urlsBloque: string[] = [];
 
       for (let j = 0; j < bloque.fotos.length; j++) {
-        const url = await subirFotoStorage(
-          expedienteId,
+        const result = await subirFotoUnificada(
+          appointmentName,
           bloque.fotos[j],
-          `adicional_${i}_${j}`
+          'adicional',
+          `${bloque.descripcion.toLowerCase().replace(/\s+/g, '_')}_${j + 1}`
         );
-        if (url) {
-          urlsBloque.push(url);
+        if (result.success && result.publicUrl) {
+          urlsBloque.push(result.publicUrl);
         } else {
           errores.push(`Error al subir foto adicional ${i + 1}-${j + 1}`);
         }
@@ -185,10 +202,16 @@ export async function guardarCierreFotos(
 
     let urlFotoPersona: string | null = null;
     if (fotoPersonaRecibe) {
-      urlFotoPersona = await subirFotoStorage(expedienteId, fotoPersonaRecibe, 'persona_recibe');
-      if (!urlFotoPersona) {
+      const result = await subirFotoUnificada(
+        appointmentName,
+        fotoPersonaRecibe,
+        'receptor',
+        'cliente_foto'
+      );
+      if (!result.success || !result.publicUrl) {
         return { success: false, error: 'Error al subir foto de persona que recibe' };
       }
+      urlFotoPersona = result.publicUrl;
     }
 
     const updates: Record<string, any> = {
