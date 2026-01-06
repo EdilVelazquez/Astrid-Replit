@@ -116,8 +116,8 @@ export async function subirFotoPrefolio(
       'foto_vehiculo_costado_derecho': { tipo: 'vehiculo', detalle: 'costado_der' },
       'foto_vehiculo_trasera': { tipo: 'vehiculo', detalle: 'trasera' },
       'foto_odometro': { tipo: 'odometro', detalle: 'lectura' },
-      'foto_vin': { tipo: 'vin', detalle: 'escaneado' },
-      'foto_placas': { tipo: 'placas', detalle: 'frontal' },
+      'foto_vin': { tipo: 'vin', detalle: 'ocr' },
+      'foto_placas': { tipo: 'placas', detalle: 'ocr' },
       'foto_tablero': { tipo: 'tablero', detalle: 'vista' },
     };
 

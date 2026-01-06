@@ -106,7 +106,8 @@ prefolio-photos/
 └── servicios/
     └── {APPOINTMENT_NAME}/
         ├── {APPOINTMENT_NAME}_vehiculo_frente_20251230-093012.jpg
-        ├── {APPOINTMENT_NAME}_vin_escaneado_20251230-093045.jpg
+        ├── {APPOINTMENT_NAME}_vin_ocr_20251230-093045.jpg
+        ├── {APPOINTMENT_NAME}_placas_ocr_20251230-093050.jpg
         ├── {APPOINTMENT_NAME}_odometro_lectura_20251230-093120.jpg
         ├── {APPOINTMENT_NAME}_instalacion_equipo_20251230-094010.jpg
         ├── {APPOINTMENT_NAME}_conexion_corriente_20251230-094015.jpg
@@ -120,8 +121,9 @@ prefolio-photos/
 `{APPOINTMENT_NAME}_{tipo}_{detalle}_{YYYYMMDD-HHMMSS}.jpg`
 
 ### Tipos de fotos
-- **Prefolio**: vehiculo (frente/costado_izq/costado_der/trasera), vin, odometro, placas, tablero
-- **Cierre**: instalacion, conexion (corriente/tierra/ignicion/ignicion_corte), boton (panico)
+- **Prefolio**: vehiculo (frente/costado_izq/costado_der/trasera), odometro (lectura), tablero (vista)
+- **OCR/IA**: vin (ocr), placas (ocr) - fotos usadas para extracción de texto que se almacenan permanentemente
+- **Cierre**: instalacion (equipo), conexion (corriente/tierra/ignicion/ignicion_corte), boton (panico)
 - **Documentación**: firma (cliente), receptor (cliente_foto), adicional (descripción personalizada)
 
 ## Notas de Desarrollo
