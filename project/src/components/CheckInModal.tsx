@@ -58,8 +58,11 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     return true;
   };
 
+  const isTestService = servicio.appointment_name?.startsWith('AP-TEST') || 
+                         servicio.is_test_service === true;
+
   const handleCheckIn = async () => {
-    if (!servicePoint) {
+    if (!servicePoint && !isTestService) {
       setCheckInState('no_coords');
       return;
     }
@@ -73,11 +76,27 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setCheckInState('requesting');
     
     try {
-      const location = await getCurrentLocation();
-      setUserLocation(location);
-      
-      const result = isWithinGeofence(location, servicePoint, GEOFENCE_RADIUS);
-      setDistance(result.distance);
+      let location: Coordinates;
+      let result: { isWithin: boolean; distance: number };
+
+      if (isTestService) {
+        console.log('🧪 [CHECK-IN] Servicio de prueba detectado - bypass de geocerca');
+        if (servicePoint) {
+          location = servicePoint;
+          result = { isWithin: true, distance: 0 };
+        } else {
+          location = { latitude: 19.4326, longitude: -99.1332 };
+          result = { isWithin: true, distance: 0 };
+          console.log('⚠️ [CHECK-IN] Usando coordenadas por defecto (CDMX) - servicio sin coordenadas');
+        }
+        setUserLocation(location);
+        setDistance(0);
+      } else {
+        location = await getCurrentLocation();
+        setUserLocation(location);
+        result = isWithinGeofence(location, servicePoint!, GEOFENCE_RADIUS);
+        setDistance(result.distance);
+      }
 
       await saveCheckInAttempt(
         servicio.appointment_name,

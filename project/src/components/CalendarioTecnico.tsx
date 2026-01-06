@@ -291,9 +291,10 @@ export default function CalendarioTecnico({
               const estado = obtenerEstadoServicio(servicio);
               const puedeIniciar = puedeIniciarServicio(servicio);
               const esEnCurso = estado.estado === 'en_curso';
+              const yaHizoCheckInLista = !!servicio.check_in_timestamp || serviciosConCheckIn.has(servicio.id);
 
               const handleIniciar = () => {
-                if (!puedeIniciar) return;
+                if (!puedeIniciar || !yaHizoCheckInLista) return;
                 setServicioConfirmacion(servicio);
               };
 
@@ -333,13 +334,17 @@ export default function CalendarioTecnico({
                       >
                         Reanudar
                       </button>
-                    ) : puedeIniciar && estado.estado === 'pendiente' ? (
+                    ) : puedeIniciar && estado.estado === 'pendiente' && yaHizoCheckInLista ? (
                       <button
                         onClick={handleIniciar}
                         className="px-3 py-1 bg-[#0F1C3F] text-white text-xs font-medium rounded-md hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
                       >
                         Iniciar
                       </button>
+                    ) : puedeIniciar && estado.estado === 'pendiente' && !yaHizoCheckInLista ? (
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-amber-100 text-amber-700">
+                        Check-In
+                      </span>
                     ) : (
                       <span className={`text-xs px-2 py-0.5 rounded-md ${
                         estado.estado === 'completado' ? 'bg-gray-100 text-gray-500' :
@@ -671,13 +676,18 @@ function TarjetaServicio({
                   Llegada confirmada
                 </span>
               )}
-              {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && (
+              {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && yaHizoCheckIn && (
                 <button
                   onClick={handleIniciarServicio}
                   className="px-4 py-2 bg-[#0F1C3F] text-white text-sm font-medium rounded-lg hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
                 >
                   Iniciar servicio
                 </button>
+              )}
+              {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && !yaHizoCheckIn && (
+                <span className="px-3 py-2 bg-gray-100 text-gray-500 text-sm rounded-lg">
+                  Requiere Check-In
+                </span>
               )}
             </div>
           </div>
