@@ -86,6 +86,54 @@ export function ServiceFlow({
   onFormularioCierreCompletado,
   onCancelarCierre,
 }: ServiceFlowProps) {
+  if (expediente.status === 'vuelta_en_falso') {
+    return (
+      <div className="bg-white rounded-xl border border-red-200 overflow-hidden">
+        <div className="bg-red-50 border-b border-red-200 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-red-800">
+                Servicio bloqueado
+              </h2>
+              <p className="text-sm text-red-600">
+                Este servicio fue marcado como "Vuelta en falso"
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="px-6 py-8 text-center">
+          <div className="max-w-md mx-auto">
+            <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Este servicio no puede continuar
+            </h3>
+            <p className="text-gray-600 mb-4">
+              El servicio <span className="font-medium">{expediente.appointment_name}</span> fue marcado como "Vuelta en falso" y no puede iniciarse ni continuar.
+            </p>
+            {expediente.notes_terminate && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-left">
+                <p className="text-xs text-red-600 font-medium mb-1">Motivo registrado:</p>
+                <p className="text-sm text-red-800 italic">"{expediente.notes_terminate}"</p>
+              </div>
+            )}
+            <p className="text-sm text-gray-500 mb-6">
+              Solo se podrá continuar cuando se genere un nuevo registro de servicio.
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            >
+              Volver al calendario
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const getCurrentStep = (): Step => {
     if (!prefolioCompletado) return 'prefolio';
     if (mostrarFormularioCierre) return 'cierre';

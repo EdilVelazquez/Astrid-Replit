@@ -89,6 +89,30 @@ project/
 - `complete_work` - Al finalizar servicio (desde FormularioCierre)
 - `create_asset` - Cuando VIN escaneado difiere del original
 - `edit_asset` - Cuando otros datos del vehículo cambian
+- `terminate` - Cuando el técnico marca "Volver en falso" (servicio no realizado)
+
+### Webhook terminate
+Enviado cuando un técnico marca un servicio como "Vuelta en falso" después del check-in:
+```json
+{
+  "action": "terminate",
+  "appointment_id": "...",
+  "appointment_name": "...",
+  "work_order_name": "...",
+  "esn": "...",
+  "technician_email": "...",
+  "company_Id": "...",
+  "notes_terminate": "Motivo capturado obligatoriamente",
+  "timestamp": "..."
+}
+```
+
+## Estado "Vuelta en Falso"
+- **Activación**: Botón visible solo después del check-in, antes de iniciar servicio
+- **Modal obligatorio**: Requiere capturar `notes_terminate` (campo texto libre obligatorio)
+- **Comportamiento**: Servicio queda bloqueado permanentemente, no puede iniciarse ni continuar
+- **Persistencia**: Se guarda `status: 'vuelta_en_falso'` y `notes_terminate` en BD
+- **Visualización**: Badge rojo en tarjeta, notas visibles en historial (solo lectura)
 
 ### Campos comunes en todos los webhooks
 - `action` - Tipo de acción (start_work, complete_work, create_asset, edit_asset)

@@ -16,6 +16,7 @@ interface CalendarioTecnicoProps {
   servicios: ExpedienteServicio[];
   onSeleccionarServicio: (servicio: ExpedienteServicio) => void;
   servicioActual: ExpedienteServicio | null;
+  onServicioActualizado?: (servicio: ExpedienteServicio) => void;
 }
 
 type VistaCalendario = 'dia' | 'semana' | 'mes';
@@ -34,7 +35,8 @@ type EstadoServicio = {
 export default function CalendarioTecnico({
   servicios,
   onSeleccionarServicio,
-  servicioActual
+  servicioActual,
+  onServicioActualizado
 }: CalendarioTecnicoProps) {
   const [vistaActual, setVistaActual] = useState<VistaCalendario>('dia');
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
@@ -52,6 +54,9 @@ export default function CalendarioTecnico({
 
   const handleVolverEnFalsoSuccess = (servicioActualizado: ExpedienteServicio) => {
     setServiciosVueltaEnFalso(prev => new Set([...prev, servicioActualizado.id]));
+    if (onServicioActualizado) {
+      onServicioActualizado(servicioActualizado);
+    }
   };
 
   const esHoy = (fecha: Date): boolean => {

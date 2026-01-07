@@ -530,6 +530,11 @@ function TechnicianApp() {
   };
 
   const handleSeleccionarServicioDesdeCalendario = async (servicio: ExpedienteServicio) => {
+    if (servicio.status === 'vuelta_en_falso') {
+      alert('Este servicio fue marcado como "Vuelta en falso" y no puede continuarse. Solo se podrá continuar cuando se genere un nuevo registro.');
+      return;
+    }
+
     const fechaServicio = servicio.scheduled_start_time
       ? formatearFechaLocal(new Date(servicio.scheduled_start_time))
       : '';
@@ -548,6 +553,18 @@ function TechnicianApp() {
     agregarLogConsola(`📋 Servicio seleccionado desde calendario: ${servicio.work_order_name} - ${servicio.appointment_name}`);
     dispatch({ type: 'SET_EXPEDIENTE', payload: servicio });
     setMostrarCalendario(false);
+  };
+
+  const handleServicioActualizado = (servicioActualizado: ExpedienteServicio) => {
+    setTodosLosServicios(prev => 
+      prev.map(s => s.id === servicioActualizado.id ? servicioActualizado : s)
+    );
+    
+    if (state.expediente_actual?.id === servicioActualizado.id) {
+      dispatch({ type: 'SET_EXPEDIENTE', payload: servicioActualizado });
+    }
+    
+    agregarLogConsola(`📋 Servicio actualizado: ${servicioActualizado.appointment_name} - Estado: ${servicioActualizado.status}`);
   };
 
   const handlePrefolioCompleted = async () => {
@@ -963,6 +980,7 @@ function TechnicianApp() {
             servicios={todosLosServicios}
             onSeleccionarServicio={handleSeleccionarServicioDesdeCalendario}
             servicioActual={state.expediente_actual}
+            onServicioActualizado={handleServicioActualizado}
           />
         ) : (
           <div className="space-y-6">
