@@ -1,0 +1,111 @@
+Corregir de forma definitiva la lógica de persistencia y reanudación del flujo, ya que el sistema sigue regresando incorrectamente a Pruebas del dispositivo aun cuando el servicio ya se encuentra en Documentación final, incluso sin haber llenado nada en ese formulario.
+
+Problema exacto
+
+El servicio avanza hasta mostrar la vista de Documentación final.
+
+Sin realizar cambios, el usuario vuelve a la agenda.
+
+Al reanudar el mismo servicio:
+
+El sistema vuelve forzosamente a Pruebas del dispositivo.
+
+Todo aparece marcado como correcto.
+
+El flujo queda bloqueado, sin botón para avanzar.
+
+Esto demuestra que:
+
+El sistema NO está guardando correctamente que el servicio ya entró a Documentación final.
+
+O está recalculando el estado en frontend en lugar de respetar el estado persistido.
+
+Comportamiento obligatorio requerido (sin excepciones)
+
+Checkpoint explícito al entrar a Documentación final
+
+En el momento exacto en que se muestra la vista de Documentación final (aunque no se haya llenado nada):
+
+Debe guardarse el estado del servicio como:
+
+current_stage = documentation_final
+
+tests_completed = true
+
+Este guardado debe ser inmediato y persistente (backend / DB).
+
+Reanudación basada solo en estado persistido
+
+Al reanudar un servicio:
+
+El sistema NO debe recalcular el flujo con base en:
+
+Pruebas
+
+installation_details
+
+Flags locales
+
+Debe leer únicamente el estado persistido del servicio.
+
+Si current_stage = documentation_final:
+
+Renderizar directamente Documentación final.
+
+No evaluar pruebas.
+
+No mostrar mensajes de pruebas pendientes.
+
+No depender del botón de “Confirmar pruebas”.
+
+Prohibido retroceder automáticamente
+
+El flujo NO puede regresar a Pruebas del dispositivo de forma automática.
+
+Solo puede regresar a pruebas si ocurre una acción explícita del usuario:
+
+Cambiar dispositivo.
+
+Reiniciar pruebas.
+
+Reiniciar servicio.
+
+Si ninguna de estas acciones ocurrió:
+
+El flujo debe permanecer en Documentación final.
+
+Regla de oro
+
+Mostrar la vista de Documentación final equivale a haber superado pruebas.
+
+Nunca debe existir un escenario donde:
+
+El usuario ya vio Documentación final
+
+Y al reanudar se le exija nuevamente validar pruebas
+
+Eliminar dependencias incorrectas
+
+El mensaje:
+
+“Completa las siguientes pruebas para continuar…”
+
+No debe evaluarse ni renderizarse si current_stage ≠ tests.
+
+El botón de avance de pruebas:
+
+No debe ser condición para entrar a Documentación final si ya se llegó ahí.
+
+Objetivo final
+
+Asegurar que el flujo sea determinístico, persistente y no regresivo:
+
+Entrar a Documentación final = estado guardado.
+
+Reanudar = regresar exactamente a ese estado.
+
+Nunca volver a pruebas sin acción explícita del usuario.
+
+Eliminar definitivamente estados bloqueados o inconsistentes.
+
+Este ajuste es crítico y debe resolverse corrigiendo la fuente de verdad del estado del servicio, no con parches visuales.

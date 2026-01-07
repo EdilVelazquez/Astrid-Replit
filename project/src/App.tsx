@@ -553,23 +553,26 @@ function TechnicianApp() {
     }
 
     agregarLogConsola(`📋 Servicio seleccionado desde calendario: ${servicio.work_order_name} - ${servicio.appointment_name}`);
+    agregarLogConsola(`🔍 [DEBUG] ID del servicio: ${servicio.id}, prefolio_realizado: ${servicio.prefolio_realizado}`);
     
     // Restaurar estado del flujo basándose en datos persistidos
     const tienePrefolio = servicio.prefolio_realizado === true;
     setPrefolioCompletado(tienePrefolio);
     
     if (tienePrefolio) {
-      agregarLogConsola('📂 Prefolio ya completado - restaurando estado...');
+      agregarLogConsola('📂 Prefolio ya completado - buscando datos de cierre...');
       
       // Verificar si hay datos de cierre guardados (indica que ya pasó a Documentación final)
       const datosCierre = await obtenerDatosCierre(servicio.id);
+      agregarLogConsola(`🔍 [DEBUG] Resultado obtenerDatosCierre: ${JSON.stringify(datosCierre)}`);
       
       if (datosCierre) {
-        agregarLogConsola('📄 Datos de cierre encontrados - restaurando paso Documentación final');
+        agregarLogConsola('📄 ✅ Datos de cierre encontrados - restaurando paso Documentación final');
         setMostrarFormularioCierre(true);
         setPruebasCompletadas(true);
         setPruebasBloqueadas(true);
       } else {
+        agregarLogConsola('📄 ❌ No hay datos de cierre - quedando en Pruebas del dispositivo');
         // No hay cierre, verificar sesión de pruebas
         const expedienteId = generarExpedienteId(servicio.work_order_name, servicio.appointment_name);
         const sesionPruebas = await obtenerSesionPorExpediente(expedienteId);

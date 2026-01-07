@@ -260,6 +260,8 @@ export async function obtenerDatosCierre(
   expedienteId: number
 ): Promise<CierreDataRecord | null> {
   try {
+    console.log('🔍 [CIERRE] Buscando datos de cierre para expediente:', expedienteId);
+    
     const { data, error } = await supabase
       .from('cierre_data')
       .select('*')
@@ -271,6 +273,7 @@ export async function obtenerDatosCierre(
       return null;
     }
 
+    console.log('🔍 [CIERRE] Datos encontrados:', data ? 'SÍ' : 'NO', data);
     return data as CierreDataRecord | null;
   } catch (err) {
     console.error('❌ [CIERRE] Error inesperado al obtener datos de cierre:', err);
