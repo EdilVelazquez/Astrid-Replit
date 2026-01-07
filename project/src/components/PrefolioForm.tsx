@@ -4,11 +4,18 @@ import { guardarPrefolioDatos, guardarPrefolioFotos } from '../services/prefolio
 import { buscarEquipoEnInventario } from '../services/zohoInventoryService';
 import { notificarInicioTrabajo, notificarCreacionAsset, notificarEdicionAsset } from '../services/serviceTransitionService';
 import { supabase } from '../supabaseClient';
-import { CheckCircle, Loader2, AlertCircle, Camera, FileImage, QrCode, X, MapPin, Calendar, User, Building, Truck, Server } from 'lucide-react';
+import { CheckCircle, Loader2, AlertCircle, Camera, FileImage, QrCode, X, MapPin, Calendar, User, Building, Truck, Server, Plus, Trash2 } from 'lucide-react';
 import { QRScanner } from './QRScanner';
 import { VinScannerWithPhoto } from './VinScannerWithPhoto';
 import { PlacaScannerWithPhoto } from './PlacaScannerWithPhoto';
 import { traducirPruebasDesdeInstallationDetails, formatearFecha } from '../utils';
+
+interface FotoAdicional {
+  id: string;
+  descripcion: string;
+  fotos: File[];
+  previews: string[];
+}
 
 interface PrefolioFormProps {
   expediente: ExpedienteServicio;
@@ -64,6 +71,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
   const [fotoVin, setFotoVin] = useState<File | null>(null);
   const [fotoPlacas, setFotoPlacas] = useState<File | null>(null);
   const [fotoTablero, setFotoTablero] = useState<File | null>(null);
+  const [fotosAdicionales, setFotosAdicionales] = useState<FotoAdicional[]>([]);
 
   const [marcas, setMarcas] = useState<VehicleBrand[]>([]);
   const [modelos, setModelos] = useState<VehicleModel[]>([]);
@@ -314,6 +322,56 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
     }
   };
 
+  const agregarBloqueAdicional = () => {
+    if (fotosAdicionales.length >= 5) return;
+    setFotosAdicionales(prev => [...prev, {
+      id: `adicional-${Date.now()}`,
+      descripcion: '',
+      fotos: [],
+      previews: []
+    }]);
+  };
+
+  const eliminarBloqueAdicional = (id: string) => {
+    setFotosAdicionales(prev => prev.filter(bloque => bloque.id !== id));
+  };
+
+  const actualizarDescripcionAdicional = (id: string, descripcion: string) => {
+    setFotosAdicionales(prev => prev.map(bloque => 
+      bloque.id === id ? { ...bloque, descripcion } : bloque
+    ));
+  };
+
+  const agregarFotoAdicional = (id: string, file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFotosAdicionales(prev => prev.map(bloque => {
+        if (bloque.id === id && bloque.fotos.length < 5) {
+          return {
+            ...bloque,
+            fotos: [...bloque.fotos, file],
+            previews: [...bloque.previews, reader.result as string]
+          };
+        }
+        return bloque;
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const eliminarFotoAdicional = (bloqueId: string, fotoIndex: number) => {
+    setFotosAdicionales(prev => prev.map(bloque => {
+      if (bloque.id === bloqueId) {
+        return {
+          ...bloque,
+          fotos: bloque.fotos.filter((_, i) => i !== fotoIndex),
+          previews: bloque.previews.filter((_, i) => i !== fotoIndex)
+        };
+      }
+      return bloque;
+    }));
+  };
+
   const buscarEquipoEnInventarioAhora = async (esnValue: string) => {
     console.log('🔎 [PrefolioForm] Iniciando búsqueda con ESN:', esnValue);
 
@@ -512,6 +570,10 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
         return;
       }
 
+      const fotosAdicionalesParaSubir = fotosAdicionales
+        .filter(b => b.fotos.length > 0)
+        .map(b => ({ descripcion: b.descripcion, fotos: b.fotos }));
+
       const resultadoFotos = await guardarPrefolioFotos(
         expediente.id,
         expediente.appointment_name || '',
@@ -519,7 +581,8 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
         fotoOdometro,
         fotoVin,
         fotoPlacas,
-        fotoTablero
+        fotoTablero,
+        fotosAdicionalesParaSubir
       );
 
       if (!resultadoFotos.success) {
@@ -1203,6 +1266,100 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
               </div>
             )}
           </div>
+        </section>
+
+        <section className="pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Fotos Adicionales
+            </h3>
+            {fotosAdicionales.length < 5 && (
+              <button
+                type="button"
+                onClick={agregarBloqueAdicional}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Agregar foto
+              </button>
+            )}
+          </div>
+
+          {fotosAdicionales.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">
+              No hay fotos adicionales. Usa el botón "Agregar foto" si necesitas documentar algo extra.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {fotosAdicionales.map((bloque, index) => (
+                <div key={bloque.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-700">Foto adicional {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => eliminarBloqueAdicional(bloque.id)}
+                      className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    placeholder="Descripción (ej: Daño preexistente en puerta)"
+                    value={bloque.descripcion}
+                    onChange={(e) => actualizarDescripcionAdicional(bloque.id, e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {bloque.previews.map((preview, fotoIndex) => (
+                      <div key={fotoIndex} className="relative w-20 h-20">
+                        <img
+                          src={preview}
+                          alt={`Foto ${fotoIndex + 1}`}
+                          className="w-full h-full object-cover rounded-lg border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => eliminarFotoAdicional(bloque.id, fotoIndex)}
+                          className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {bloque.fotos.length < 5 && (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            agregarFotoAdicional(bloque.id, e.target.files[0]);
+                          }
+                          e.target.value = '';
+                        }}
+                        className="hidden"
+                        id={`foto-adicional-prefolio-${bloque.id}`}
+                      />
+                      <label
+                        htmlFor={`foto-adicional-prefolio-${bloque.id}`}
+                        className="flex items-center justify-center gap-2 px-3 py-2 bg-white text-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-300 text-sm"
+                      >
+                        <Camera className="w-4 h-4" />
+                        <span>Agregar foto ({bloque.fotos.length}/5)</span>
+                      </label>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {error && (

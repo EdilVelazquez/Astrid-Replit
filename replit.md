@@ -61,7 +61,8 @@ project/
 5. Webhook `start_work` enviado
 6. Completa formulario de prefolio:
    - Escanea ESN, VIN, placa
-   - Toma fotos obligatorias
+   - Toma fotos obligatorias (vehículo 4 ángulos, odómetro, tablero)
+   - Agrega fotos adicionales opcionales (hasta 5 bloques, cada uno con hasta 5 fotos)
    - Si VIN cambió → webhook `create_asset`
    - Si otros datos cambiaron → webhook `edit_asset`
 6. Realiza pruebas pasivas (ignición, botón pánico, ubicación)
@@ -147,9 +148,11 @@ prefolio-photos/
 
 ### Tipos de fotos
 - **Prefolio**: vehiculo (frente/costado_izq/costado_der/trasera), odometro (lectura), tablero (vista)
+- **Prefolio adicionales**: prefolio_adicional_{descripcion}_{numero} - fotos opcionales con descripción personalizada
 - **OCR/IA**: vin (ocr), placas (ocr) - fotos usadas para extracción de texto que se almacenan permanentemente
 - **Cierre**: instalacion (equipo), conexion (corriente/tierra/ignicion/ignicion_corte), boton (panico)
-- **Documentación**: firma (cliente), receptor (cliente_foto), adicional (descripción personalizada)
+- **Cierre adicionales**: adicional_{descripcion}_{numero} - fotos opcionales con descripción personalizada
+- **Documentación**: firma (cliente), receptor (cliente_foto)
 
 ## Notas de Desarrollo
 - La app requiere conexión a un proyecto Supabase externo existente

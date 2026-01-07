@@ -172,6 +172,11 @@ export async function subirFotoPrefolio(
   }
 }
 
+interface FotoAdicionalParaSubir {
+  descripcion: string;
+  fotos: File[];
+}
+
 export async function guardarPrefolioFotos(
   expedienteId: number,
   appointmentName: string,
@@ -179,7 +184,8 @@ export async function guardarPrefolioFotos(
   fotoOdometro: File | null,
   fotoVin: File | null,
   fotoPlacas: File | null,
-  fotoTablero: File | null
+  fotoTablero: File | null,
+  fotosAdicionales: FotoAdicionalParaSubir[] = []
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('📸 Iniciando guardado de todas las fotos:', {
@@ -190,6 +196,7 @@ export async function guardarPrefolioFotos(
       tieneFotoVin: !!fotoVin,
       tieneFotoPlacas: !!fotoPlacas,
       tieneFotoTablero: !!fotoTablero,
+      numBloquesAdicionales: fotosAdicionales.length,
     });
 
     const uploadResults: Array<{ success: boolean; campo: string; error?: string }> = [];
@@ -285,6 +292,41 @@ export async function guardarPrefolioFotos(
 
       if (!result.success) {
         console.error('❌ Error subiendo foto del tablero:', result.error);
+      }
+    }
+
+    if (fotosAdicionales.length > 0) {
+      console.log(`📸 Subiendo ${fotosAdicionales.length} bloques de fotos adicionales...`);
+      
+      for (let bloqueIndex = 0; bloqueIndex < fotosAdicionales.length; bloqueIndex++) {
+        const bloque = fotosAdicionales[bloqueIndex];
+        const descripcionNormalizada = bloque.descripcion
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, '')
+          .substring(0, 30) || `adicional_${bloqueIndex + 1}`;
+        
+        for (let fotoIndex = 0; fotoIndex < bloque.fotos.length; fotoIndex++) {
+          const campoAdicional = `prefolio_adicional_${descripcionNormalizada}_${fotoIndex + 1}`;
+          console.log(`📸 Subiendo foto adicional: ${campoAdicional}`);
+          
+          const result = await subirFotoPrefolio(
+            expedienteId,
+            appointmentName,
+            campoAdicional,
+            bloque.fotos[fotoIndex]
+          );
+          
+          uploadResults.push({
+            success: result.success,
+            campo: campoAdicional,
+            error: result.error,
+          });
+          
+          if (!result.success) {
+            console.error(`❌ Error subiendo foto adicional ${campoAdicional}:`, result.error);
+          }
+        }
       }
     }
 
