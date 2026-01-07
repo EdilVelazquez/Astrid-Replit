@@ -62,6 +62,7 @@ export interface ExpedienteServicio {
   check_in_latitude?: number | null;
   check_in_longitude?: number | null;
   check_in_distance?: number | null;
+  notes_terminate?: string | null;
 }
 
 export interface ValidationSummaryJSON {
