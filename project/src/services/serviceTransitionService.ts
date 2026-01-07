@@ -98,28 +98,6 @@ export async function enviarTransicionServicio(
     
     logToConsola(`${getActionEmoji(params.action)} [WEBHOOK] Enviando: ${getActionLabel(params.action)}...`);
 
-    // Modo de pruebas para ESN especial
-    if (params.esn === '000000000000000') {
-      console.log('🧪 [TRANSICIÓN] Modo de pruebas activado - simulando respuesta exitosa');
-
-      // Simular un pequeño delay para hacer más realista
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      await registrarLog(true, undefined, 200);
-      
-      const duration = Date.now() - startTime;
-      logToConsola(`✅ [WEBHOOK] ${getActionLabel(params.action)} - Simulado OK (${duration}ms)`);
-
-      return {
-        success: true,
-        message: `Transición ${params.action} simulada exitosamente (modo pruebas)`,
-        data: {
-          test_mode: true,
-          action: params.action
-        }
-      };
-    }
-
     const response = await fetch(TRANSITION_WEBHOOK_URL, {
       method: 'POST',
       headers: {
