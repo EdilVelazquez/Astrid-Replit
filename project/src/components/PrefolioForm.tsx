@@ -627,6 +627,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
           esn: esn,
           technician_email: expediente.email_tecnico || '',
           company_Id: expediente.company_Id || '',
+          expediente_id: expediente.id,
           asset_data: {
             vin: vinNuevo,
             vin_original: vinOriginal,
@@ -654,6 +655,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
           esn: esn,
           technician_email: expediente.email_tecnico || '',
           company_Id: expediente.company_Id || '',
+          expediente_id: expediente.id,
           asset_data: {
             vin: vinNuevo || undefined,
             placas: placas || undefined,
@@ -681,7 +683,8 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
         work_order_name: expediente.work_order_name || '',
         esn: esn,
         technician_email: expediente.email_tecnico || '',
-        company_Id: expediente.company_Id || ''
+        company_Id: expediente.company_Id || '',
+        expediente_id: expediente.id
       });
 
       if (!resultadoTransicion.success) {

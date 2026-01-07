@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, X, Loader2, CheckCircle } from 'lucide-react';
 import { ExpedienteServicio } from '../types';
 import { supabase } from '../supabaseClient';
+import { notificarVueltaEnFalso } from '../services/serviceTransitionService';
 
 interface VolverEnFalsoModalProps {
   isOpen: boolean;
@@ -11,8 +12,6 @@ interface VolverEnFalsoModalProps {
 }
 
 type ModalState = 'form' | 'saving' | 'success' | 'error';
-
-const WEBHOOK_URL = 'https://aiwebhookn8n.numaris.com/webhook/c8cb35f5-2567-4584-b7f1-319fdf830443';
 
 export function VolverEnFalsoModal({ isOpen, onClose, servicio, onSuccess }: VolverEnFalsoModalProps) {
   const [notes, setNotes] = useState('');
@@ -46,28 +45,18 @@ export function VolverEnFalsoModal({ isOpen, onClose, servicio, onSuccess }: Vol
         throw new Error('Error al guardar en base de datos');
       }
 
-      const webhookPayload = {
-        action: 'terminate',
-        appointment_id: servicio.appointment_id,
-        appointment_name: servicio.appointment_name,
-        work_order_name: servicio.work_order_name,
-        esn: servicio.device_esn,
-        technician_email: servicio.email_tecnico,
-        company_Id: servicio.company_Id,
-        notes_terminate: notes.trim(),
-        timestamp: new Date().toISOString()
-      };
-
-      const webhookResponse = await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload)
+      const webhookResult = await notificarVueltaEnFalso({
+        appointment_name: servicio.appointment_name || '',
+        work_order_name: servicio.work_order_name || '',
+        esn: servicio.device_esn || '',
+        technician_email: servicio.email_tecnico || '',
+        company_Id: servicio.company_Id || '',
+        expediente_id: servicio.id,
+        notes_terminate: notes.trim()
       });
 
-      if (!webhookResponse.ok) {
-        console.warn('Webhook failed but DB update succeeded:', webhookResponse.status);
+      if (!webhookResult.success) {
+        console.warn('Webhook failed but DB update succeeded:', webhookResult.error);
       }
 
       setModalState('success');

@@ -17,8 +17,11 @@ import {
   ExternalLink,
   TrendingUp,
   AlertTriangle,
-  RefreshCcw
+  RefreshCcw,
+  Webhook,
+  Send
 } from 'lucide-react';
+import { obtenerLogsWebhook, formatearTimestamp, getActionLabel, getActionColor, WebhookLogEntry } from '../../services/webhookLogService';
 
 interface ExpedienteDetailProps {
   expedienteId: number;
@@ -47,11 +50,26 @@ interface TestSession {
 export function ExpedienteDetail({ expedienteId, onBack }: ExpedienteDetailProps) {
   const [expediente, setExpediente] = useState<ExpedienteServicio | null>(null);
   const [testSession, setTestSession] = useState<TestSession | null>(null);
+  const [webhookLogs, setWebhookLogs] = useState<WebhookLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   useEffect(() => {
     loadExpedienteDetail();
   }, [expedienteId]);
+
+  useEffect(() => {
+    if (expedienteId) {
+      loadWebhookLogs();
+    }
+  }, [expedienteId]);
+
+  const loadWebhookLogs = async () => {
+    setLoadingLogs(true);
+    const logs = await obtenerLogsWebhook(expedienteId);
+    setWebhookLogs(logs);
+    setLoadingLogs(false);
+  };
 
   const loadExpedienteDetail = async () => {
     setLoading(true);
@@ -527,6 +545,89 @@ export function ExpedienteDetail({ expedienteId, onBack }: ExpedienteDetailProps
           </div>
         </div>
       )}
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Send className="w-6 h-6 text-purple-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Registro de Webhooks</h3>
+          </div>
+          <button
+            onClick={loadWebhookLogs}
+            disabled={loadingLogs}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <RefreshCcw className={`w-4 h-4 ${loadingLogs ? 'animate-spin' : ''}`} />
+            Actualizar
+          </button>
+        </div>
+
+        {loadingLogs ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : webhookLogs.length === 0 ? (
+          <div className="text-center py-8">
+            <Webhook className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No hay registros de webhooks para este servicio</p>
+            <p className="text-sm text-gray-400 mt-1">Los webhooks se registrarán cuando se envíen desde la app</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {webhookLogs.map((log, index) => (
+              <div
+                key={log.id || index}
+                className={`border rounded-lg p-4 ${
+                  log.success
+                    ? 'border-gray-200 bg-white'
+                    : 'border-red-200 bg-red-50'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getActionColor(log.action)}`}>
+                      {getActionLabel(log.action)}
+                    </span>
+                    {log.success ? (
+                      <span className="flex items-center gap-1 text-xs text-green-600">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Exitoso
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-red-600">
+                        <XCircle className="w-3 h-3" />
+                        Error
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500 font-mono">
+                    {formatearTimestamp(log.timestamp)}
+                  </span>
+                </div>
+
+                <div className="text-sm text-gray-600 mb-2">
+                  {log.payload_summary}
+                </div>
+
+                <div className="flex items-center gap-4 text-xs text-gray-400">
+                  {log.duration_ms && (
+                    <span>Duración: {log.duration_ms}ms</span>
+                  )}
+                  {log.response_status && (
+                    <span>HTTP: {log.response_status}</span>
+                  )}
+                </div>
+
+                {log.error_message && (
+                  <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded text-xs text-red-700">
+                    <strong>Error:</strong> {log.error_message}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -154,6 +154,28 @@ prefolio-photos/
 - **Cierre adicionales**: adicional_{descripcion}_{numero} - fotos opcionales con descripción personalizada
 - **Documentación**: firma (cliente), receptor (cliente_foto)
 
+## Registro de Webhooks (Auditoría)
+El sistema registra automáticamente cada envío de webhook para auditoría y trazabilidad.
+
+### Datos registrados por cada webhook
+- **Fecha y hora exacta** del envío (timestamp ISO)
+- **Tipo de acción**: start_work, complete_work, create_asset, edit_asset, terminate
+- **URL destino** del webhook
+- **Identificador del servicio** (expediente_id, appointment_name)
+- **Resultado**: éxito o error con mensaje detallado
+- **Duración** del envío en milisegundos
+- **Código HTTP** de respuesta
+
+### Visualización
+- Accesible desde la **Consola de Monitoreo** (Panel de Administración)
+- En el detalle de cada expediente, sección "Registro de Webhooks"
+- Orden cronológico desde el inicio del servicio
+- Errores claramente identificados con fondo rojo
+
+### Tabla de BD
+- `webhook_logs` - Almacena todos los registros
+- Índices por expediente_id, appointment_name, timestamp, action
+
 ## Notas de Desarrollo
 - La app requiere conexión a un proyecto Supabase externo existente
 - Las migraciones en `/supabase/migrations/` definen el esquema de BD

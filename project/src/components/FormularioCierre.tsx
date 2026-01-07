@@ -230,7 +230,8 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
         work_order_name: expediente.work_order_name || '',
         esn: expediente.device_esn || '',
         technician_email: expediente.email_tecnico || '',
-        company_Id: expediente.company_Id || ''
+        company_Id: expediente.company_Id || '',
+        expediente_id: expediente.id
       });
 
       if (!resultadoTransicion.success) {
