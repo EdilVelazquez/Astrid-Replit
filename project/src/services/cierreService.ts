@@ -241,3 +241,39 @@ export async function guardarCierreFotos(
     return { success: false, error: 'Error inesperado al subir fotos' };
   }
 }
+
+export interface CierreDataRecord {
+  id: number;
+  expediente_id: number;
+  tipo_corte: string | null;
+  nombre_recibe: string | null;
+  firma_url: string | null;
+  fotos_obligatorias: Record<string, string> | null;
+  fotos_adicionales: Array<{ descripcion: string; urls: string[] }> | null;
+  foto_persona_recibe: string | null;
+  completado: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function obtenerDatosCierre(
+  expedienteId: number
+): Promise<CierreDataRecord | null> {
+  try {
+    const { data, error } = await supabase
+      .from('cierre_data')
+      .select('*')
+      .eq('expediente_id', expedienteId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('❌ [CIERRE] Error al obtener datos de cierre:', error);
+      return null;
+    }
+
+    return data as CierreDataRecord | null;
+  } catch (err) {
+    console.error('❌ [CIERRE] Error inesperado al obtener datos de cierre:', err);
+    return null;
+  }
+}

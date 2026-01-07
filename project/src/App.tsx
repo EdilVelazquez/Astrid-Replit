@@ -12,6 +12,7 @@ import { generarExpedienteId, obtenerSesionPorExpediente, reiniciarSesion, crear
 import { enviarDatosFinalesWebhook } from './services/webhookService';
 import { reiniciarServicioDePruebas, esServicioDePruebas } from './services/testServiceService';
 import { buscarEquipoEnInventario } from './services/zohoInventoryService';
+import { obtenerDatosCierre } from './services/cierreService';
 import { useAuth } from './contexts/AuthContext';
 import { X } from 'lucide-react';
 import { Header } from './components/Header';
@@ -552,6 +553,58 @@ function TechnicianApp() {
     }
 
     agregarLogConsola(`📋 Servicio seleccionado desde calendario: ${servicio.work_order_name} - ${servicio.appointment_name}`);
+    
+    // Restaurar estado del flujo basándose en datos persistidos
+    const tienePrefolio = servicio.prefolio_realizado === true;
+    setPrefolioCompletado(tienePrefolio);
+    
+    if (tienePrefolio) {
+      agregarLogConsola('📂 Prefolio ya completado - restaurando estado...');
+      
+      // Verificar si hay datos de cierre guardados (indica que ya pasó a Documentación final)
+      const datosCierre = await obtenerDatosCierre(servicio.id);
+      
+      if (datosCierre) {
+        agregarLogConsola('📄 Datos de cierre encontrados - restaurando paso Documentación final');
+        setMostrarFormularioCierre(true);
+        setPruebasCompletadas(true);
+        setPruebasBloqueadas(true);
+      } else {
+        // No hay cierre, verificar sesión de pruebas
+        const expedienteId = generarExpedienteId(servicio.work_order_name, servicio.appointment_name);
+        const sesionPruebas = await obtenerSesionPorExpediente(expedienteId);
+        
+        if (sesionPruebas && sesionPruebas.session_active) {
+          agregarLogConsola('🔧 Sesión de pruebas activa encontrada - restaurando estados de pruebas');
+          
+          // Restaurar estados de pruebas desde la sesión
+          if (sesionPruebas.ignicion_exitosa) dispatch({ type: 'SET_IGNICION_EXITOSA', payload: true });
+          if (sesionPruebas.boton_exitoso) dispatch({ type: 'SET_BOTON_EXITOSO', payload: true });
+          if (sesionPruebas.ubicacion_exitosa) dispatch({ type: 'SET_UBICACION_EXITOSA', payload: true });
+          if (sesionPruebas.bloqueo_exitoso) dispatch({ type: 'SET_BLOQUEO_EXITOSO', payload: true });
+          if (sesionPruebas.desbloqueo_exitoso) dispatch({ type: 'SET_DESBLOQUEO_EXITOSO', payload: true });
+          if (sesionPruebas.buzzer_exitoso) dispatch({ type: 'SET_BUZZER_EXITOSO', payload: true });
+          if (sesionPruebas.buzzer_off_exitoso) dispatch({ type: 'SET_BUZZER_OFF_EXITOSO', payload: true });
+          if (sesionPruebas.boton_fecha_preguntada) dispatch({ type: 'SET_BOTON_FECHA_PREGUNTADA', payload: sesionPruebas.boton_fecha_preguntada });
+          if (sesionPruebas.ubicacion_fecha_preguntada) dispatch({ type: 'SET_UBICACION_FECHA_PREGUNTADA', payload: sesionPruebas.ubicacion_fecha_preguntada });
+          
+          // Cargar ESN de la sesión
+          if (sesionPruebas.esn) {
+            dispatch({ type: 'SET_ESN', payload: sesionPruebas.esn });
+            setEsnTemporal(sesionPruebas.esn);
+          }
+        }
+        
+        setMostrarFormularioCierre(false);
+        setPruebasCompletadas(false);
+      }
+    } else {
+      // No tiene prefolio - resetear todo
+      setMostrarFormularioCierre(false);
+      setPruebasCompletadas(false);
+      setPruebasBloqueadas(false);
+    }
+    
     dispatch({ type: 'SET_EXPEDIENTE', payload: servicio });
     setMostrarCalendario(false);
   };
