@@ -56,6 +56,7 @@ function TechnicianApp() {
   const [mostrarMisServicios, setMostrarMisServicios] = useState(false);
   const [mostrarModalReiniciarServicio, setMostrarModalReiniciarServicio] = useState(false);
   const [pendingEsnDuplicado, setPendingEsnDuplicado] = useState<{ esn: string; woInfo: string; callback: () => void } | null>(null);
+  const [serviciosConCheckIn, setServiciosConCheckIn] = useState<Set<number>>(new Set());
   const [pendingCambioDispositivo, setPendingCambioDispositivo] = useState<{ nuevoESN: string; motivo: string; descripcion: string; woInfo: string } | null>(null);
 
 
@@ -981,6 +982,10 @@ function TechnicianApp() {
             onSeleccionarServicio={handleSeleccionarServicioDesdeCalendario}
             servicioActual={state.expediente_actual}
             onServicioActualizado={handleServicioActualizado}
+            serviciosConCheckIn={serviciosConCheckIn}
+            onCheckInSuccess={(servicioId: number) => {
+              setServiciosConCheckIn(prev => new Set([...prev, servicioId]));
+            }}
           />
         ) : (
           <div className="space-y-6">

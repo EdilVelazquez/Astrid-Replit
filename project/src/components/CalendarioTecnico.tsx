@@ -18,6 +18,8 @@ interface CalendarioTecnicoProps {
   onSeleccionarServicio: (servicio: ExpedienteServicio) => void;
   servicioActual: ExpedienteServicio | null;
   onServicioActualizado?: (servicio: ExpedienteServicio) => void;
+  serviciosConCheckIn?: Set<number>;
+  onCheckInSuccess?: (servicioId: number) => void;
 }
 
 type VistaCalendario = 'dia' | 'semana' | 'mes';
@@ -37,7 +39,9 @@ export default function CalendarioTecnico({
   servicios,
   onSeleccionarServicio,
   servicioActual,
-  onServicioActualizado
+  onServicioActualizado,
+  serviciosConCheckIn: serviciosConCheckInProp,
+  onCheckInSuccess: onCheckInSuccessProp
 }: CalendarioTecnicoProps) {
   const [vistaActual, setVistaActual] = useState<VistaCalendario>('dia');
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
@@ -48,11 +52,17 @@ export default function CalendarioTecnico({
   const [servicioVolverEnFalso, setServicioVolverEnFalso] = useState<ExpedienteServicio | null>(null);
   const [servicioReiniciar, setServicioReiniciar] = useState<ExpedienteServicio | null>(null);
   const [reiniciando, setReiniciando] = useState(false);
-  const [serviciosConCheckIn, setServiciosConCheckIn] = useState<Set<number>>(new Set());
+  const [serviciosConCheckInLocal, setServiciosConCheckInLocal] = useState<Set<number>>(new Set());
   const [serviciosVueltaEnFalso, setServiciosVueltaEnFalso] = useState<Set<number>>(new Set());
 
+  const serviciosConCheckIn = serviciosConCheckInProp || serviciosConCheckInLocal;
+
   const handleCheckInSuccess = (servicioActualizado: ExpedienteServicio) => {
-    setServiciosConCheckIn(prev => new Set([...prev, servicioActualizado.id]));
+    if (onCheckInSuccessProp) {
+      onCheckInSuccessProp(servicioActualizado.id);
+    } else {
+      setServiciosConCheckInLocal(prev => new Set([...prev, servicioActualizado.id]));
+    }
   };
 
   const handleVolverEnFalsoSuccess = (servicioActualizado: ExpedienteServicio) => {
