@@ -277,3 +277,63 @@ export async function obtenerDatosCierre(
     return null;
   }
 }
+
+/**
+ * Marca que el servicio avanzó a la etapa de Documentación final.
+ * Crea un registro inicial en cierre_data para persistir el checkpoint.
+ * Esto permite restaurar correctamente el estado al reanudar el servicio.
+ */
+export async function marcarAvanceACierre(
+  expedienteId: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log('📌 [CIERRE] Marcando avance a etapa de cierre...', { expedienteId });
+
+    // Verificar si ya existe un registro
+    const { data: existente } = await supabase
+      .from('cierre_data')
+      .select('id')
+      .eq('expediente_id', expedienteId)
+      .maybeSingle();
+
+    if (existente) {
+      console.log('✅ [CIERRE] Ya existe registro de cierre, no se crea nuevo');
+      return { success: true };
+    }
+
+    // Crear registro inicial
+    const { error } = await supabase
+      .from('cierre_data')
+      .insert({
+        expediente_id: expedienteId,
+        completado: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      console.error('❌ [CIERRE] Error al crear registro inicial:', error);
+      return { success: false, error: error.message };
+    }
+
+    // También actualizar expedientes_servicio para marcar que las pruebas fueron completadas
+    const { error: expError } = await supabase
+      .from('expedientes_servicio')
+      .update({
+        pruebas_completadas: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', expedienteId);
+
+    if (expError) {
+      console.warn('⚠️ [CIERRE] No se pudo actualizar pruebas_completadas en expedientes_servicio:', expError);
+      // No fallar por esto, el registro en cierre_data es suficiente
+    }
+
+    console.log('✅ [CIERRE] Avance a etapa de cierre marcado exitosamente');
+    return { success: true };
+  } catch (err) {
+    console.error('❌ [CIERRE] Error inesperado:', err);
+    return { success: false, error: 'Error inesperado al marcar avance' };
+  }
+}

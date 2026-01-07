@@ -12,7 +12,7 @@ import { generarExpedienteId, obtenerSesionPorExpediente, reiniciarSesion, crear
 import { enviarDatosFinalesWebhook } from './services/webhookService';
 import { reiniciarServicioDePruebas, esServicioDePruebas } from './services/testServiceService';
 import { buscarEquipoEnInventario } from './services/zohoInventoryService';
-import { obtenerDatosCierre } from './services/cierreService';
+import { obtenerDatosCierre, marcarAvanceACierre } from './services/cierreService';
 import { useAuth } from './contexts/AuthContext';
 import { X } from 'lucide-react';
 import { Header } from './components/Header';
@@ -1082,8 +1082,19 @@ function TechnicianApp() {
                   onErrorPanel={setErrorPanel}
                   onLogConsola={agregarLogConsola}
                   pruebasBloqueadas={pruebasBloqueadas}
-                  onPruebasCompletadas={() => {
+                  onPruebasCompletadas={async () => {
                     agregarLogConsola('✅ Técnico confirmó pruebas - avanzando a formulario de cierre');
+                    
+                    // Persistir el avance a cierre en la base de datos
+                    if (state.expediente_actual?.id) {
+                      const resultado = await marcarAvanceACierre(state.expediente_actual.id);
+                      if (resultado.success) {
+                        agregarLogConsola('📌 Checkpoint guardado: Documentación final');
+                      } else {
+                        agregarLogConsola(`⚠️ No se pudo guardar checkpoint: ${resultado.error}`);
+                      }
+                    }
+                    
                     setPruebasCompletadas(true);
                     setPruebasBloqueadas(true);
                     setMostrarFormularioCierre(true);
