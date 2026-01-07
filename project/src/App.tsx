@@ -552,70 +552,8 @@ function TechnicianApp() {
       return;
     }
 
-    agregarLogConsola(`📋 Servicio seleccionado desde calendario: ${servicio.work_order_name} - ${servicio.appointment_name}`);
-    agregarLogConsola(`🔍 [DEBUG] ID del servicio: ${servicio.id}, prefolio_realizado: ${servicio.prefolio_realizado}`);
-    
-    // Restaurar estado del flujo basándose en datos persistidos
-    const tienePrefolio = servicio.prefolio_realizado === true;
-    setPrefolioCompletado(tienePrefolio);
-    
-    if (tienePrefolio) {
-      agregarLogConsola('📂 Prefolio ya completado - buscando datos de cierre...');
-      
-      // Verificar si hay datos de cierre guardados (indica que ya pasó a Documentación final)
-      const datosCierre = await obtenerDatosCierre(servicio.id);
-      agregarLogConsola(`🔍 [DEBUG] Resultado obtenerDatosCierre: ${JSON.stringify(datosCierre)}`);
-      
-      if (datosCierre) {
-        agregarLogConsola('📄 ✅ Datos de cierre encontrados - restaurando paso Documentación final');
-        
-        // También restaurar ESN del servicio
-        if (servicio.device_esn) {
-          dispatch({ type: 'SET_ESN', payload: servicio.device_esn });
-          setEsnTemporal(servicio.device_esn);
-          agregarLogConsola(`📱 ESN restaurado: ${servicio.device_esn}`);
-        }
-        
-        setMostrarFormularioCierre(true);
-        setPruebasCompletadas(true);
-        setPruebasBloqueadas(true);
-      } else {
-        agregarLogConsola('📄 ❌ No hay datos de cierre - quedando en Pruebas del dispositivo');
-        // No hay cierre, verificar sesión de pruebas
-        const expedienteId = generarExpedienteId(servicio.work_order_name, servicio.appointment_name);
-        const sesionPruebas = await obtenerSesionPorExpediente(expedienteId);
-        
-        if (sesionPruebas && sesionPruebas.session_active) {
-          agregarLogConsola('🔧 Sesión de pruebas activa encontrada - restaurando estados de pruebas');
-          
-          // Restaurar estados de pruebas desde la sesión
-          if (sesionPruebas.ignicion_exitosa) dispatch({ type: 'SET_IGNICION_EXITOSA', payload: true });
-          if (sesionPruebas.boton_exitoso) dispatch({ type: 'SET_BOTON_EXITOSO', payload: true });
-          if (sesionPruebas.ubicacion_exitosa) dispatch({ type: 'SET_UBICACION_EXITOSA', payload: true });
-          if (sesionPruebas.bloqueo_exitoso) dispatch({ type: 'SET_BLOQUEO_EXITOSO', payload: true });
-          if (sesionPruebas.desbloqueo_exitoso) dispatch({ type: 'SET_DESBLOQUEO_EXITOSO', payload: true });
-          if (sesionPruebas.buzzer_exitoso) dispatch({ type: 'SET_BUZZER_EXITOSO', payload: true });
-          if (sesionPruebas.buzzer_off_exitoso) dispatch({ type: 'SET_BUZZER_OFF_EXITOSO', payload: true });
-          if (sesionPruebas.boton_fecha_preguntada) dispatch({ type: 'SET_BOTON_FECHA_PREGUNTADA', payload: sesionPruebas.boton_fecha_preguntada });
-          if (sesionPruebas.ubicacion_fecha_preguntada) dispatch({ type: 'SET_UBICACION_FECHA_PREGUNTADA', payload: sesionPruebas.ubicacion_fecha_preguntada });
-          
-          // Cargar ESN de la sesión
-          if (sesionPruebas.esn) {
-            dispatch({ type: 'SET_ESN', payload: sesionPruebas.esn });
-            setEsnTemporal(sesionPruebas.esn);
-          }
-        }
-        
-        setMostrarFormularioCierre(false);
-        setPruebasCompletadas(false);
-      }
-    } else {
-      // No tiene prefolio - resetear todo
-      setMostrarFormularioCierre(false);
-      setPruebasCompletadas(false);
-      setPruebasBloqueadas(false);
-    }
-    
+    // La restauración del estado se maneja en el useEffect que observa state.expediente_actual
+    // Solo necesitamos establecer el expediente y ocultar el calendario
     dispatch({ type: 'SET_EXPEDIENTE', payload: servicio });
     setMostrarCalendario(false);
   };
@@ -707,8 +645,26 @@ function TechnicianApp() {
       agregarLogConsola(`🔍 Estado del servicio: ${state.expediente_actual.prefolio_realizado ? 'INFORMACIÓN COMPLETADA' : 'INFORMACIÓN PENDIENTE'}`);
 
       if (state.expediente_actual.prefolio_realizado) {
-        agregarLogConsola(`✅ Información ya completada previamente - Listo para pruebas`);
+        agregarLogConsola(`✅ Información ya completada previamente`);
         setPrefolioCompletado(true);
+        
+        // VERIFICAR SI YA AVANZÓ A DOCUMENTACIÓN FINAL
+        const datosCierre = await obtenerDatosCierre(state.expediente_actual.id);
+        
+        if (datosCierre) {
+          agregarLogConsola(`📄 Datos de cierre encontrados - Restaurando a Documentación final`);
+          setMostrarFormularioCierre(true);
+          setPruebasCompletadas(true);
+          setPruebasBloqueadas(true);
+          
+          // Restaurar ESN si existe
+          if (state.expediente_actual.device_esn) {
+            dispatch({ type: 'SET_ESN', payload: state.expediente_actual.device_esn });
+            setEsnTemporal(state.expediente_actual.device_esn);
+          }
+        } else {
+          agregarLogConsola(`🔧 Sin datos de cierre - Mostrando pruebas del dispositivo`);
+        }
       } else {
         agregarLogConsola(`📝 Información pendiente - Mostrando formulario`);
       }

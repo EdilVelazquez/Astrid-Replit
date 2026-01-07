@@ -141,6 +141,15 @@ export function ServiceFlow({
   };
 
   const currentStep = getCurrentStep();
+  
+  // DEBUG: Log para diagnosticar el paso actual
+  console.log('🔍 [ServiceFlow] Estado actual:', {
+    prefolioCompletado,
+    mostrarFormularioCierre,
+    currentStep,
+    esn,
+    pruebasBloqueadas
+  });
 
   const getStepStatus = (stepId: Step): 'completed' | 'current' | 'pending' => {
     const stepOrder = ['prefolio', 'pruebas', 'cierre'];
