@@ -568,6 +568,14 @@ function TechnicianApp() {
       
       if (datosCierre) {
         agregarLogConsola('📄 ✅ Datos de cierre encontrados - restaurando paso Documentación final');
+        
+        // También restaurar ESN del servicio
+        if (servicio.device_esn) {
+          dispatch({ type: 'SET_ESN', payload: servicio.device_esn });
+          setEsnTemporal(servicio.device_esn);
+          agregarLogConsola(`📱 ESN restaurado: ${servicio.device_esn}`);
+        }
+        
         setMostrarFormularioCierre(true);
         setPruebasCompletadas(true);
         setPruebasBloqueadas(true);
