@@ -194,6 +194,8 @@ export async function notificarCreacionAsset(params: {
   technician_email: string;
   company_Id?: string;
   expediente_id?: number;
+  appointment_id?: string;
+  asset_id?: string;
   onLogConsola?: (msg: string) => void;
   asset_data: {
     vin: string;
@@ -224,6 +226,8 @@ export async function notificarEdicionAsset(params: {
   technician_email: string;
   company_Id?: string;
   expediente_id?: number;
+  appointment_id?: string;
+  asset_id?: string;
   onLogConsola?: (msg: string) => void;
   asset_data: {
     vin?: string;

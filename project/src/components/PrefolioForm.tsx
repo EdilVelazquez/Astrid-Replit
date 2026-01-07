@@ -600,6 +600,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose, onLog
       const vinCambio = vinNuevo.length > 0 && vinNuevo !== vinOriginal;
 
       // Verificar otros cambios de vehículo (solo si realmente cambiaron)
+      // NOTA: El odómetro se excluye explícitamente de esta validación
       const placasOriginal = (expediente.asset_placas || '').trim().toUpperCase();
       const placasNuevo = placas.trim().toUpperCase();
       const colorOriginal = (expediente.asset_color || '').trim().toLowerCase();
@@ -608,16 +609,35 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose, onLog
       const economicoNuevo = numeroEconomico.trim();
       const añoOriginal = (expediente.vehicle_year || '').trim();
       const añoNuevo = año.trim();
-      const odometroOriginal = expediente.vehicle_odometer || 0;
-      const odometroNuevo = parseFloat(odometro) || 0;
+      
+      // Comparar marca y modelo contra valores precargados
+      const marcaOriginal = (expediente.vehicle_brand || '').trim().toLowerCase();
+      const marcaNueva = (marcaSeleccionada?.name || '').trim().toLowerCase();
+      const modeloOriginal = (expediente.vehicle_model || '').trim().toLowerCase();
+      const modeloNuevo = (modeloSeleccionado?.name || '').trim().toLowerCase();
 
+      // Detectar cambios: si el nuevo valor tiene contenido y difiere del original
+      // Esto también detecta cuando se completa un campo que venía nulo/vacío
       const cambioPlacas = placasNuevo.length > 0 && placasNuevo !== placasOriginal;
       const cambioColor = colorNuevo.length > 0 && colorNuevo !== colorOriginal;
       const cambioEconomico = economicoNuevo.length > 0 && economicoNuevo !== economicoOriginal;
       const cambioAño = añoNuevo.length > 0 && añoNuevo !== añoOriginal;
-      const cambioOdometro = odometroNuevo > 0 && odometroNuevo !== odometroOriginal;
+      const cambioMarca = marcaNueva.length > 0 && marcaNueva !== marcaOriginal;
+      const cambioModelo = modeloNuevo.length > 0 && modeloNuevo !== modeloOriginal;
 
-      const otrosCambios = cambioPlacas || cambioColor || cambioEconomico || cambioAño || cambioOdometro;
+      // El odómetro se excluye de la detección de cambios para edit_asset
+      const otrosCambios = cambioPlacas || cambioColor || cambioEconomico || cambioAño || cambioMarca || cambioModelo;
+      
+      if (otrosCambios) {
+        console.log('📋 [PREFOLIO] Cambios detectados:', {
+          placas: cambioPlacas,
+          color: cambioColor,
+          economico: cambioEconomico,
+          año: cambioAño,
+          marca: cambioMarca,
+          modelo: cambioModelo
+        });
+      }
 
       // Enviar webhook de CreateAsset si VIN cambió
       if (vinCambio) {
@@ -629,6 +649,8 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose, onLog
           technician_email: expediente.email_tecnico || '',
           company_Id: expediente.company_Id || '',
           expediente_id: expediente.id,
+          appointment_id: expediente.appointment_id || '',
+          asset_id: expediente.asset_name || '',
           onLogConsola,
           asset_data: {
             vin: vinNuevo,
@@ -650,6 +672,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose, onLog
         }
       } else if (otrosCambios && !vinCambio) {
         // Enviar webhook de EditAsset si hay otros cambios (pero no VIN)
+        // Incluye todos los datos del vehículo, no solo los modificados
         console.log('🔔 [PREFOLIO] Datos de vehículo cambiaron - enviando webhook EditAsset...');
         const resultadoAsset = await notificarEdicionAsset({
           appointment_name: expediente.appointment_name || '',
@@ -658,6 +681,8 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose, onLog
           technician_email: expediente.email_tecnico || '',
           company_Id: expediente.company_Id || '',
           expediente_id: expediente.id,
+          appointment_id: expediente.appointment_id || '',
+          asset_id: expediente.asset_name || '',
           onLogConsola,
           asset_data: {
             vin: vinNuevo || undefined,
