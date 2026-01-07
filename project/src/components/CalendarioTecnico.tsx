@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ExpedienteServicio } from '../types';
-import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2, Car, Wrench, User, Navigation, XCircle } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2, Car, Wrench, User, Navigation, XCircle, RefreshCw } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 import { ConfirmModal } from './ui/Modal';
 import { CheckInModal } from './CheckInModal';
 import { VolverEnFalsoModal } from './VolverEnFalsoModal';
@@ -45,6 +46,8 @@ export default function CalendarioTecnico({
   const [servicioConfirmacion, setServicioConfirmacion] = useState<ExpedienteServicio | null>(null);
   const [servicioCheckIn, setServicioCheckIn] = useState<ExpedienteServicio | null>(null);
   const [servicioVolverEnFalso, setServicioVolverEnFalso] = useState<ExpedienteServicio | null>(null);
+  const [servicioReiniciar, setServicioReiniciar] = useState<ExpedienteServicio | null>(null);
+  const [reiniciando, setReiniciando] = useState(false);
   const [serviciosConCheckIn, setServiciosConCheckIn] = useState<Set<number>>(new Set());
   const [serviciosVueltaEnFalso, setServiciosVueltaEnFalso] = useState<Set<number>>(new Set());
 
@@ -56,6 +59,52 @@ export default function CalendarioTecnico({
     setServiciosVueltaEnFalso(prev => new Set([...prev, servicioActualizado.id]));
     if (onServicioActualizado) {
       onServicioActualizado(servicioActualizado);
+    }
+  };
+
+  const handleReiniciarServicio = async () => {
+    if (!servicioReiniciar) return;
+    
+    setReiniciando(true);
+    try {
+      const { data, error } = await supabase
+        .from('expedientes_servicio')
+        .update({
+          status: 'pendiente',
+          notes_terminate: null,
+          validation_start_timestamp: null,
+          validation_end_timestamp: null,
+          validation_final_status: null,
+          device_esn: null,
+          prefolio_completado: false
+        })
+        .eq('id', servicioReiniciar.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setServiciosConCheckIn(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(servicioReiniciar.id);
+        return newSet;
+      });
+      setServiciosVueltaEnFalso(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(servicioReiniciar.id);
+        return newSet;
+      });
+
+      if (onServicioActualizado && data) {
+        onServicioActualizado(data);
+      }
+      
+      setServicioReiniciar(null);
+    } catch (err) {
+      console.error('Error al reiniciar servicio:', err);
+      alert('Error al reiniciar el servicio. Intente de nuevo.');
+    } finally {
+      setReiniciando(false);
     }
   };
 
@@ -398,6 +447,7 @@ export default function CalendarioTecnico({
             onIniciarServicio={setServicioConfirmacion}
             onCheckIn={setServicioCheckIn}
             onVolverEnFalso={setServicioVolverEnFalso}
+            onReiniciarServicio={setServicioReiniciar}
             checkInRealizado={serviciosConCheckIn.has(servicio.id)}
             esVueltaEnFalso={serviciosVueltaEnFalso.has(servicio.id)}
           />
@@ -598,6 +648,17 @@ export default function CalendarioTecnico({
           onSuccess={handleVolverEnFalsoSuccess}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!servicioReiniciar}
+        onClose={() => setServicioReiniciar(null)}
+        onConfirm={handleReiniciarServicio}
+        title="Reiniciar servicio"
+        message={servicioReiniciar ? `¿Estás seguro de que deseas reiniciar este servicio?\n\nCita: ${servicioReiniciar.appointment_name || 'Sin número'}\n\nEsto permitirá volver a ejecutar el servicio desde el inicio (check-in, prefolio, pruebas).` : ''}
+        confirmText={reiniciando ? 'Reiniciando...' : 'Reiniciar'}
+        cancelText="Cancelar"
+        variant="confirm"
+      />
     </div>
   );
 }
@@ -610,6 +671,7 @@ function TarjetaServicio({
   onIniciarServicio,
   onCheckIn,
   onVolverEnFalso,
+  onReiniciarServicio,
   checkInRealizado = false,
   esVueltaEnFalso = false
 }: {
@@ -620,6 +682,7 @@ function TarjetaServicio({
   onIniciarServicio: (servicio: ExpedienteServicio) => void;
   onCheckIn: (servicio: ExpedienteServicio) => void;
   onVolverEnFalso: (servicio: ExpedienteServicio) => void;
+  onReiniciarServicio: (servicio: ExpedienteServicio) => void;
   checkInRealizado?: boolean;
   esVueltaEnFalso?: boolean;
 }) {
@@ -757,10 +820,30 @@ function TarjetaServicio({
                 </span>
               )}
               {servicioVueltaEnFalso && (
-                <span className="px-3 py-2 bg-red-100 text-red-700 text-sm font-medium rounded-lg flex items-center gap-1.5">
-                  <XCircle className="w-4 h-4" />
-                  Servicio bloqueado
-                </span>
+                <>
+                  <span className="px-3 py-2 bg-red-100 text-red-700 text-sm font-medium rounded-lg flex items-center gap-1.5">
+                    <XCircle className="w-4 h-4" />
+                    Bloqueado
+                  </span>
+                  <button
+                    onClick={() => onReiniciarServicio(servicio)}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors border border-gray-300 flex items-center gap-1.5"
+                    title="Reiniciar servicio para permitir nueva ejecución"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Reiniciar
+                  </button>
+                </>
+              )}
+              {estado.estado === 'completado' && (
+                <button
+                  onClick={() => onReiniciarServicio(servicio)}
+                  className="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors border border-gray-300 flex items-center gap-1.5"
+                  title="Reiniciar servicio para permitir nueva ejecución"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Reiniciar
+                </button>
               )}
             </div>
           </div>
