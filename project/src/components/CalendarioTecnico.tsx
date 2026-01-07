@@ -75,8 +75,7 @@ export default function CalendarioTecnico({
           validation_start_timestamp: null,
           validation_end_timestamp: null,
           validation_final_status: null,
-          device_esn: null,
-          prefolio_completado: false
+          device_esn: null
         })
         .eq('id', servicioReiniciar.id)
         .select()
