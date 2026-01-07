@@ -9,11 +9,12 @@ interface VolverEnFalsoModalProps {
   onClose: () => void;
   servicio: ExpedienteServicio;
   onSuccess: (servicio: ExpedienteServicio) => void;
+  onLogConsola?: (msg: string) => void;
 }
 
 type ModalState = 'form' | 'saving' | 'success' | 'error';
 
-export function VolverEnFalsoModal({ isOpen, onClose, servicio, onSuccess }: VolverEnFalsoModalProps) {
+export function VolverEnFalsoModal({ isOpen, onClose, servicio, onSuccess, onLogConsola }: VolverEnFalsoModalProps) {
   const [notes, setNotes] = useState('');
   const [modalState, setModalState] = useState<ModalState>('form');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -52,7 +53,8 @@ export function VolverEnFalsoModal({ isOpen, onClose, servicio, onSuccess }: Vol
         technician_email: servicio.email_tecnico || '',
         company_Id: servicio.company_Id || '',
         expediente_id: servicio.id,
-        notes_terminate: notes.trim()
+        notes_terminate: notes.trim(),
+        onLogConsola
       });
 
       if (!webhookResult.success) {

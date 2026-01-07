@@ -285,6 +285,7 @@ export function ServiceFlow({
             expediente={expediente}
             onCompleted={onPrefolioCompleted}
             onClose={onClose}
+            onLogConsola={onLogConsola}
           />
         )}
 
@@ -392,6 +393,7 @@ export function ServiceFlow({
             expediente={expediente}
             onCompleted={onFormularioCierreCompletado}
             onCancel={onCancelarCierre}
+            onLogConsola={onLogConsola}
           />
         )}
       </div>

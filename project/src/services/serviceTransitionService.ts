@@ -12,6 +12,7 @@ export interface TransitionWebhookParams {
   company_Id?: string;
   expediente_id?: number;
   notes_terminate?: string;
+  onLogConsola?: (msg: string) => void;
   asset_data?: {
     vin?: string;
     vin_original?: string;
@@ -37,11 +38,34 @@ export interface TransitionWebhookResponse {
  * @param params Parámetros de la transición
  * @returns Respuesta del webhook
  */
+const getActionEmoji = (action: string): string => {
+  switch (action) {
+    case 'start_work': return '🚀';
+    case 'complete_work': return '✅';
+    case 'create_asset': return '➕';
+    case 'edit_asset': return '✏️';
+    case 'terminate': return '🛑';
+    default: return '📤';
+  }
+};
+
+const getActionLabel = (action: string): string => {
+  switch (action) {
+    case 'start_work': return 'Inicio de trabajo';
+    case 'complete_work': return 'Trabajo completado';
+    case 'create_asset': return 'Crear asset';
+    case 'edit_asset': return 'Editar asset';
+    case 'terminate': return 'Vuelta en falso';
+    default: return action;
+  }
+};
+
 export async function enviarTransicionServicio(
   params: TransitionWebhookParams
 ): Promise<TransitionWebhookResponse> {
   const startTime = Date.now();
   const timestamp = new Date().toISOString();
+  const { onLogConsola } = params;
   
   const payloadSummary = `ESN: ${params.esn || 'N/A'}, Técnico: ${params.technician_email || 'N/A'}${params.asset_data ? ', Asset modificado' : ''}${params.notes_terminate ? ', Notas: ' + params.notes_terminate.substring(0, 50) : ''}`;
   
@@ -62,9 +86,17 @@ export async function enviarTransicionServicio(
     }
   };
   
+  const logToConsola = (msg: string) => {
+    if (onLogConsola) {
+      onLogConsola(msg);
+    }
+  };
+  
   try {
     console.log('🔔 [TRANSICIÓN] Enviando webhook:', params.action);
     console.log('📋 [TRANSICIÓN] Datos:', JSON.stringify(params, null, 2));
+    
+    logToConsola(`${getActionEmoji(params.action)} [WEBHOOK] Enviando: ${getActionLabel(params.action)}...`);
 
     // Modo de pruebas para ESN especial
     if (params.esn === '000000000000000') {
@@ -74,6 +106,9 @@ export async function enviarTransicionServicio(
       await new Promise(resolve => setTimeout(resolve, 800));
       
       await registrarLog(true, undefined, 200);
+      
+      const duration = Date.now() - startTime;
+      logToConsola(`✅ [WEBHOOK] ${getActionLabel(params.action)} - Simulado OK (${duration}ms)`);
 
       return {
         success: true,
@@ -93,11 +128,14 @@ export async function enviarTransicionServicio(
       body: JSON.stringify(params),
     });
 
+    const duration = Date.now() - startTime;
+
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'No se pudo leer el error');
       console.error('❌ [TRANSICIÓN] Error HTTP:', response.status, errorText);
       
       await registrarLog(false, `Error HTTP ${response.status}: ${errorText}`, response.status);
+      logToConsola(`❌ [WEBHOOK] ${getActionLabel(params.action)} - Error HTTP ${response.status} (${duration}ms)`);
       
       return {
         success: false,
@@ -109,6 +147,7 @@ export async function enviarTransicionServicio(
     console.log('✅ [TRANSICIÓN] Respuesta exitosa:', data);
     
     await registrarLog(true, undefined, response.status);
+    logToConsola(`✅ [WEBHOOK] ${getActionLabel(params.action)} - OK (${duration}ms)`);
 
     return {
       success: true,
@@ -119,7 +158,9 @@ export async function enviarTransicionServicio(
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     console.error('❌ [TRANSICIÓN] Error:', errorMessage);
     
+    const duration = Date.now() - startTime;
     await registrarLog(false, errorMessage);
+    logToConsola(`❌ [WEBHOOK] ${getActionLabel(params.action)} - Error: ${errorMessage} (${duration}ms)`);
     
     return {
       success: false,
@@ -138,6 +179,7 @@ export async function notificarInicioTrabajo(params: {
   technician_email: string;
   company_Id?: string;
   expediente_id?: number;
+  onLogConsola?: (msg: string) => void;
 }): Promise<TransitionWebhookResponse> {
   return enviarTransicionServicio({
     action: 'start_work',
@@ -155,6 +197,7 @@ export async function notificarTrabajoCompletado(params: {
   technician_email: string;
   company_Id?: string;
   expediente_id?: number;
+  onLogConsola?: (msg: string) => void;
 }): Promise<TransitionWebhookResponse> {
   return enviarTransicionServicio({
     action: 'complete_work',
@@ -173,6 +216,7 @@ export async function notificarCreacionAsset(params: {
   technician_email: string;
   company_Id?: string;
   expediente_id?: number;
+  onLogConsola?: (msg: string) => void;
   asset_data: {
     vin: string;
     vin_original: string;
@@ -202,6 +246,7 @@ export async function notificarEdicionAsset(params: {
   technician_email: string;
   company_Id?: string;
   expediente_id?: number;
+  onLogConsola?: (msg: string) => void;
   asset_data: {
     vin?: string;
     placas?: string;
@@ -230,6 +275,7 @@ export async function notificarVueltaEnFalso(params: {
   company_Id?: string;
   expediente_id?: number;
   notes_terminate: string;
+  onLogConsola?: (msg: string) => void;
 }): Promise<TransitionWebhookResponse> {
   return enviarTransicionServicio({
     action: 'terminate',

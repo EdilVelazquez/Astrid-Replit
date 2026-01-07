@@ -20,6 +20,7 @@ interface CalendarioTecnicoProps {
   onServicioActualizado?: (servicio: ExpedienteServicio) => void;
   serviciosConCheckIn?: Set<number>;
   onCheckInSuccess?: (servicioId: number) => void;
+  onLogConsola?: (msg: string) => void;
 }
 
 type VistaCalendario = 'dia' | 'semana' | 'mes';
@@ -41,7 +42,8 @@ export default function CalendarioTecnico({
   servicioActual,
   onServicioActualizado,
   serviciosConCheckIn: serviciosConCheckInProp,
-  onCheckInSuccess: onCheckInSuccessProp
+  onCheckInSuccess: onCheckInSuccessProp,
+  onLogConsola
 }: CalendarioTecnicoProps) {
   const [vistaActual, setVistaActual] = useState<VistaCalendario>('dia');
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
@@ -650,6 +652,7 @@ export default function CalendarioTecnico({
           onClose={() => setServicioVolverEnFalso(null)}
           servicio={servicioVolverEnFalso}
           onSuccess={handleVolverEnFalsoSuccess}
+          onLogConsola={onLogConsola}
         />
       )}
 

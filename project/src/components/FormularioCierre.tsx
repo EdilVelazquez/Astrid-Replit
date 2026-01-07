@@ -9,6 +9,7 @@ interface FormularioCierreProps {
   expediente: ExpedienteServicio;
   onCompleted: () => void;
   onCancel?: () => void;
+  onLogConsola?: (msg: string) => void;
 }
 
 interface FotoAdicional {
@@ -25,7 +26,7 @@ interface FotoObligatoria {
   preview: string;
 }
 
-export function FormularioCierre({ expediente, onCompleted, onCancel }: FormularioCierreProps) {
+export function FormularioCierre({ expediente, onCompleted, onCancel, onLogConsola }: FormularioCierreProps) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -231,7 +232,8 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
         esn: expediente.device_esn || '',
         technician_email: expediente.email_tecnico || '',
         company_Id: expediente.company_Id || '',
-        expediente_id: expediente.id
+        expediente_id: expediente.id,
+        onLogConsola
       });
 
       if (!resultadoTransicion.success) {

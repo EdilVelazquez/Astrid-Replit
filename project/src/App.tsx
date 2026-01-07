@@ -986,6 +986,7 @@ function TechnicianApp() {
             onCheckInSuccess={(servicioId: number) => {
               setServiciosConCheckIn(prev => new Set([...prev, servicioId]));
             }}
+            onLogConsola={agregarLogConsola}
           />
         ) : (
           <div className="space-y-6">

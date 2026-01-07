@@ -21,6 +21,7 @@ interface PrefolioFormProps {
   expediente: ExpedienteServicio;
   onCompleted: () => void;
   onClose?: () => void;
+  onLogConsola?: (msg: string) => void;
 }
 
 interface VehicleBrand {
@@ -34,7 +35,7 @@ interface VehicleModel {
   name: string;
 }
 
-export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: PrefolioFormProps) {
+export function PrefolioForm({ expediente, onCompleted, onClose: _onClose, onLogConsola }: PrefolioFormProps) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -628,6 +629,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
           technician_email: expediente.email_tecnico || '',
           company_Id: expediente.company_Id || '',
           expediente_id: expediente.id,
+          onLogConsola,
           asset_data: {
             vin: vinNuevo,
             vin_original: vinOriginal,
@@ -656,6 +658,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
           technician_email: expediente.email_tecnico || '',
           company_Id: expediente.company_Id || '',
           expediente_id: expediente.id,
+          onLogConsola,
           asset_data: {
             vin: vinNuevo || undefined,
             placas: placas || undefined,
@@ -684,7 +687,8 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
         esn: esn,
         technician_email: expediente.email_tecnico || '',
         company_Id: expediente.company_Id || '',
-        expediente_id: expediente.id
+        expediente_id: expediente.id,
+        onLogConsola
       });
 
       if (!resultadoTransicion.success) {
