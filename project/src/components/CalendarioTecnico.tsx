@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ExpedienteServicio } from '../types';
-import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2, Car, Wrench, User, Navigation } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, Lock, List, MapPin, LayoutGrid, Building2, Car, Wrench, User, Navigation, XCircle } from 'lucide-react';
 import { ConfirmModal } from './ui/Modal';
 import { CheckInModal } from './CheckInModal';
+import { VolverEnFalsoModal } from './VolverEnFalsoModal';
 
 function formatearFechaLocal(fecha: Date): string {
   const year = fecha.getFullYear();
@@ -22,7 +23,7 @@ type FiltroEstado = 'todos' | 'pendiente' | 'en_curso' | 'completado';
 type ModoVisualizacion = 'lista' | 'tarjeta';
 
 type EstadoServicio = {
-  estado: 'completado' | 'en_curso' | 'pendiente' | 'bloqueado';
+  estado: 'completado' | 'en_curso' | 'pendiente' | 'bloqueado' | 'vuelta_en_falso';
   color: string;
   colorTexto: string;
   icono: JSX.Element;
@@ -41,10 +42,16 @@ export default function CalendarioTecnico({
   const [modoVisualizacion, setModoVisualizacion] = useState<ModoVisualizacion>('tarjeta');
   const [servicioConfirmacion, setServicioConfirmacion] = useState<ExpedienteServicio | null>(null);
   const [servicioCheckIn, setServicioCheckIn] = useState<ExpedienteServicio | null>(null);
+  const [servicioVolverEnFalso, setServicioVolverEnFalso] = useState<ExpedienteServicio | null>(null);
   const [serviciosConCheckIn, setServiciosConCheckIn] = useState<Set<number>>(new Set());
+  const [serviciosVueltaEnFalso, setServiciosVueltaEnFalso] = useState<Set<number>>(new Set());
 
   const handleCheckInSuccess = (servicioActualizado: ExpedienteServicio) => {
     setServiciosConCheckIn(prev => new Set([...prev, servicioActualizado.id]));
+  };
+
+  const handleVolverEnFalsoSuccess = (servicioActualizado: ExpedienteServicio) => {
+    setServiciosVueltaEnFalso(prev => new Set([...prev, servicioActualizado.id]));
   };
 
   const esHoy = (fecha: Date): boolean => {
@@ -62,6 +69,17 @@ export default function CalendarioTecnico({
     const fechaServicio = servicio.scheduled_start_time
       ? new Date(servicio.scheduled_start_time)
       : null;
+
+    if (servicio.status === 'vuelta_en_falso') {
+      return {
+        estado: 'vuelta_en_falso',
+        color: 'bg-red-50',
+        colorTexto: 'text-red-700',
+        icono: <XCircle className="w-4 h-4" />,
+        colorEvento: 'bg-red-50 border border-red-200',
+        colorTextoEvento: 'text-red-700'
+      };
+    }
 
     if (fechaServicio && esFuturo(fechaServicio)) {
       return {
@@ -374,7 +392,9 @@ export default function CalendarioTecnico({
             onSeleccionar={onSeleccionarServicio}
             onIniciarServicio={setServicioConfirmacion}
             onCheckIn={setServicioCheckIn}
+            onVolverEnFalso={setServicioVolverEnFalso}
             checkInRealizado={serviciosConCheckIn.has(servicio.id)}
+            esVueltaEnFalso={serviciosVueltaEnFalso.has(servicio.id)}
           />
         ))}
       </div>
@@ -564,6 +584,15 @@ export default function CalendarioTecnico({
           onCheckInSuccess={handleCheckInSuccess}
         />
       )}
+
+      {servicioVolverEnFalso && (
+        <VolverEnFalsoModal
+          isOpen={!!servicioVolverEnFalso}
+          onClose={() => setServicioVolverEnFalso(null)}
+          servicio={servicioVolverEnFalso}
+          onSuccess={handleVolverEnFalsoSuccess}
+        />
+      )}
     </div>
   );
 }
@@ -575,7 +604,9 @@ function TarjetaServicio({
   onSeleccionar,
   onIniciarServicio,
   onCheckIn,
-  checkInRealizado = false
+  onVolverEnFalso,
+  checkInRealizado = false,
+  esVueltaEnFalso = false
 }: {
   servicio: ExpedienteServicio;
   estado: EstadoServicio;
@@ -583,7 +614,9 @@ function TarjetaServicio({
   onSeleccionar: (servicio: ExpedienteServicio) => void;
   onIniciarServicio: (servicio: ExpedienteServicio) => void;
   onCheckIn: (servicio: ExpedienteServicio) => void;
+  onVolverEnFalso: (servicio: ExpedienteServicio) => void;
   checkInRealizado?: boolean;
+  esVueltaEnFalso?: boolean;
 }) {
   const handleIniciarServicio = () => {
     if (!puedeIniciar) return;
@@ -591,10 +624,17 @@ function TarjetaServicio({
   };
 
   const esEnCurso = estado.estado === 'en_curso';
+  const servicioVueltaEnFalso = estado.estado === 'vuelta_en_falso' || esVueltaEnFalso;
   const yaHizoCheckIn = !!servicio.check_in_timestamp || checkInRealizado;
-  const puedeHacerCheckIn = puedeIniciar && estado.estado === 'pendiente' && !yaHizoCheckIn;
+  const puedeHacerCheckIn = puedeIniciar && estado.estado === 'pendiente' && !yaHizoCheckIn && !servicioVueltaEnFalso;
+  const puedeVolverEnFalso = yaHizoCheckIn && estado.estado === 'pendiente' && !servicioVueltaEnFalso;
 
   const getStatusIndicator = () => {
+    if (servicioVueltaEnFalso) return {
+      stripe: 'bg-red-400',
+      badge: 'bg-red-50 text-red-700 border border-red-200',
+      label: 'Vuelta en falso'
+    };
     if (estado.estado === 'completado') return { 
       stripe: 'bg-emerald-400', 
       badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
@@ -682,13 +722,23 @@ function TarjetaServicio({
                   Check-In
                 </button>
               )}
-              {yaHizoCheckIn && estado.estado === 'pendiente' && (
+              {yaHizoCheckIn && estado.estado === 'pendiente' && !servicioVueltaEnFalso && (
                 <span className="px-3 py-2 bg-emerald-100 text-emerald-700 text-sm font-medium rounded-lg flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
                   Llegada confirmada
                 </span>
               )}
-              {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && yaHizoCheckIn && (
+              {puedeVolverEnFalso && (
+                <button
+                  onClick={() => onVolverEnFalso(servicio)}
+                  className="px-3 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors border border-red-200 flex items-center gap-1.5"
+                  title="Marcar servicio como vuelta en falso"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Volver en falso
+                </button>
+              )}
+              {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && yaHizoCheckIn && !servicioVueltaEnFalso && (
                 <button
                   onClick={handleIniciarServicio}
                   className="px-4 py-2 bg-[#0F1C3F] text-white text-sm font-medium rounded-lg hover:bg-[#1A2B52] transition-colors border border-[#0F1C3F]"
@@ -696,9 +746,15 @@ function TarjetaServicio({
                   Iniciar servicio
                 </button>
               )}
-              {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && !yaHizoCheckIn && (
+              {puedeIniciar && !esEnCurso && estado.estado === 'pendiente' && !yaHizoCheckIn && !servicioVueltaEnFalso && (
                 <span className="px-3 py-2 bg-gray-100 text-gray-500 text-sm rounded-lg">
                   Requiere Check-In
+                </span>
+              )}
+              {servicioVueltaEnFalso && (
+                <span className="px-3 py-2 bg-red-100 text-red-700 text-sm font-medium rounded-lg flex items-center gap-1.5">
+                  <XCircle className="w-4 h-4" />
+                  Servicio bloqueado
                 </span>
               )}
             </div>
@@ -807,6 +863,20 @@ function TarjetaServicio({
                 <Lock className="w-3.5 h-3.5" />
                 Este servicio solo puede iniciarse el día programado
               </p>
+            </div>
+          )}
+
+          {servicioVueltaEnFalso && (
+            <div className="mt-3 pt-3 border-t border-red-100 bg-red-50 -mx-4 -mb-4 px-4 py-3 rounded-b-xl">
+              <p className="text-xs text-red-600 font-medium flex items-center gap-1.5 mb-1">
+                <XCircle className="w-3.5 h-3.5" />
+                Servicio marcado como Vuelta en falso
+              </p>
+              {servicio.notes_terminate && (
+                <p className="text-xs text-red-700 italic">
+                  "{servicio.notes_terminate}"
+                </p>
+              )}
             </div>
           )}
         </div>
