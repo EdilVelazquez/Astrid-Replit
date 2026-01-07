@@ -70,6 +70,11 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
   const [modelosFiltrados, setModelosFiltrados] = useState<VehicleModel[]>([]);
   const [mostrarQRScanner, setMostrarQRScanner] = useState(false);
   const inicializacionCompletada = useRef(false);
+  
+  const [marcaPrecargadaNombre, setMarcaPrecargadaNombre] = useState<string | null>(null);
+  const [modeloPrecargadoNombre, setModeloPrecargadoNombre] = useState<string | null>(null);
+  const VIRTUAL_MARCA_ID = -999;
+  const VIRTUAL_MODELO_ID = -999;
 
   useEffect(() => {
     cargarCatalogos();
@@ -82,108 +87,72 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
   useEffect(() => {
     const inicializarMarcaYModelo = async () => {
       if (inicializacionCompletada.current) {
-        console.log('⏭️ Inicialización ya completada, saltando...');
         return;
       }
       if (marcas.length === 0 || modelos.length === 0) {
-        console.log('⏸️ Esperando catálogos...', { marcas: marcas.length, modelos: modelos.length });
         return;
       }
 
       const marcaNombre = expediente.asset_marca;
       const modeloNombre = expediente.asset_submarca;
 
-      console.log('🔧 Inicializando marca y modelo automáticamente...');
-      console.log(`📋 Marca: ${marcaNombre}`);
-      console.log(`📋 Modelo: ${modeloNombre}`);
-      console.log(`📊 Modelos disponibles: ${modelos.length}`);
-
       let finalMarcaId: string | null = null;
+      let usandoMarcaVirtual = false;
 
       if (marcaNombre) {
         const marcaExistente = marcas.find((m) => m.name.toLowerCase() === marcaNombre.toLowerCase());
         if (marcaExistente) {
           finalMarcaId = marcaExistente.id.toString();
-          console.log(`✓ Marca encontrada: ${marcaExistente.name} (ID: ${finalMarcaId})`);
           setMarcaId(finalMarcaId);
         } else {
-          console.log(`⚠️ Marca "${marcaNombre}" no existe, creándola...`);
           const nuevoMarcaId = await crearMarcaSiNoExiste(marcaNombre);
           if (nuevoMarcaId) {
             finalMarcaId = nuevoMarcaId.toString();
             await cargarCatalogos();
             setMarcaId(finalMarcaId);
-            console.log(`✅ Marca creada: ${marcaNombre} (ID: ${finalMarcaId})`);
+          } else {
+            usandoMarcaVirtual = true;
+            setMarcaPrecargadaNombre(marcaNombre);
+            setMarcaId(VIRTUAL_MARCA_ID.toString());
           }
         }
       }
 
       if (modeloNombre) {
-        console.log(`🔍 Buscando modelo "${modeloNombre}"...`);
         const modelosActualizados = await obtenerModelosActualizados();
-        console.log(`📊 Total de modelos actualizados: ${modelosActualizados.length}`);
 
         const modeloExistente = modelosActualizados.find(
           (m) => m.name.toLowerCase() === modeloNombre.toLowerCase()
         );
 
         if (modeloExistente) {
-          console.log(`✓ Modelo encontrado: ${modeloExistente.name} (ID: ${modeloExistente.id})`);
           setModeloId(modeloExistente.id.toString());
-          // Asegurar que el modelo esté en la lista filtrada
           setModelosFiltrados(modelosActualizados);
-          console.log(`📊 Modelos filtrados actualizados: ${modelosActualizados.length}`);
         } else {
-          console.log(`⚠️ Modelo "${modeloNombre}" no existe en base de datos, creándolo...`);
-
-          let brandIdParaModelo = finalMarcaId ? parseInt(finalMarcaId, 10) : null;
-          console.log(`🏷️ Brand ID para crear modelo: ${brandIdParaModelo}`);
+          let brandIdParaModelo = finalMarcaId && !usandoMarcaVirtual ? parseInt(finalMarcaId, 10) : null;
 
           if (!brandIdParaModelo && marcas.length > 0) {
-            console.log('⚠️ No hay marca definida, usando marca genérica...');
-            let marcaGenerica = marcas.find((m) => m.name.toLowerCase() === 'genérico' || m.name.toLowerCase() === 'generico');
-
-            if (!marcaGenerica) {
-              console.log('📝 Creando marca genérica...');
-              const idMarcaGenerica = await crearMarcaSiNoExiste('Genérico');
-              if (idMarcaGenerica) {
-                await cargarCatalogos();
-                const marcasActualizadas = await obtenerMarcasActualizadas();
-                marcaGenerica = marcasActualizadas.find((m) => m.id === idMarcaGenerica);
-                console.log(`✅ Marca genérica creada: ID ${idMarcaGenerica}`);
-              }
-            } else {
-              console.log(`✓ Marca genérica encontrada: ID ${marcaGenerica.id}`);
-            }
-
+            const marcaGenerica = marcas.find((m) => m.name.toLowerCase() === 'genérico' || m.name.toLowerCase() === 'generico');
             if (marcaGenerica) {
               brandIdParaModelo = marcaGenerica.id;
             }
           }
 
           if (brandIdParaModelo) {
-            console.log(`📝 Creando modelo "${modeloNombre}" con brand_id: ${brandIdParaModelo}...`);
-            const nuevoModeloId = await crearModeloSiNoExiste(
-              brandIdParaModelo,
-              modeloNombre
-            );
+            const nuevoModeloId = await crearModeloSiNoExiste(brandIdParaModelo, modeloNombre);
             if (nuevoModeloId) {
-              console.log(`✅ Modelo creado con ID: ${nuevoModeloId}, recargando catálogos...`);
               await cargarCatalogos();
-
-              // Obtener los modelos actualizados y actualizar el estado
               const modelosActualizadosNuevos = await obtenerModelosActualizados();
               setModelos(modelosActualizadosNuevos);
               setModelosFiltrados(modelosActualizadosNuevos);
-
               setModeloId(nuevoModeloId.toString());
-              console.log(`✅ Modelo seleccionado: ${modeloNombre} (ID: ${nuevoModeloId})`);
-              console.log(`📊 Total de modelos después de crear: ${modelosActualizadosNuevos.length}`);
             } else {
-              console.error(`❌ Error al crear modelo "${modeloNombre}"`);
+              setModeloPrecargadoNombre(modeloNombre);
+              setModeloId(VIRTUAL_MODELO_ID.toString());
             }
           } else {
-            console.error('❌ No se pudo crear el modelo: no hay brand_id disponible');
+            setModeloPrecargadoNombre(modeloNombre);
+            setModeloId(VIRTUAL_MODELO_ID.toString());
           }
         }
       }
@@ -193,26 +162,6 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
 
     inicializarMarcaYModelo();
   }, [marcas, modelos]);
-
-  const obtenerMarcasActualizadas = async (): Promise<VehicleBrand[]> => {
-    try {
-      const { data: brandsData, error: brandsError } = await supabase
-        .from('vehicle_brands')
-        .select('id, name')
-        .eq('active', true)
-        .order('name', { ascending: true });
-
-      if (brandsError) {
-        console.error('Error obteniendo marcas actualizadas:', brandsError);
-        return [];
-      }
-
-      return (brandsData as VehicleBrand[]) || [];
-    } catch (err) {
-      console.error('Error inesperado obteniendo marcas:', err);
-      return [];
-    }
-  };
 
   const obtenerModelosActualizados = async (): Promise<VehicleModel[]> => {
     try {
@@ -530,11 +479,18 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
 
       const marcaSeleccionada = marcas.find((m) => m.id === parseInt(marcaId, 10));
       const modeloSeleccionado = modelos.find((m) => m.id === parseInt(modeloId, 10));
+      
+      const nombreMarcaFinal = marcaId === VIRTUAL_MARCA_ID.toString() 
+        ? marcaPrecargadaNombre 
+        : marcaSeleccionada?.name;
+      const nombreModeloFinal = modeloId === VIRTUAL_MODELO_ID.toString()
+        ? modeloPrecargadoNombre
+        : modeloSeleccionado?.name;
 
       const datosPrefolio = {
         prefolio_realizado: true,
-        asset_marca: marcaSeleccionada?.name || undefined,
-        asset_submarca: modeloSeleccionado?.name || undefined,
+        asset_marca: nombreMarcaFinal || undefined,
+        asset_submarca: nombreModeloFinal || undefined,
         asset_vin: vin,
         vehicle_odometer: parseFloat(odometro) || 0,
         asset_placas: placas,
@@ -808,10 +764,18 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
                 onChange={(e) => {
                   setMarcaId(e.target.value);
                   setModeloId('');
+                  if (e.target.value !== VIRTUAL_MARCA_ID.toString()) {
+                    setMarcaPrecargadaNombre(null);
+                  }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Seleccione una marca</option>
+                {marcaPrecargadaNombre && (
+                  <option key={VIRTUAL_MARCA_ID} value={VIRTUAL_MARCA_ID}>
+                    {marcaPrecargadaNombre} (precargado)
+                  </option>
+                )}
                 {marcas.map((marca) => (
                   <option key={marca.id} value={marca.id}>
                     {marca.name}
@@ -826,10 +790,20 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
               </label>
               <select
                 value={modeloId}
-                onChange={(e) => setModeloId(e.target.value)}
+                onChange={(e) => {
+                  setModeloId(e.target.value);
+                  if (e.target.value !== VIRTUAL_MODELO_ID.toString()) {
+                    setModeloPrecargadoNombre(null);
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Seleccione un modelo</option>
+                {modeloPrecargadoNombre && (
+                  <option key={VIRTUAL_MODELO_ID} value={VIRTUAL_MODELO_ID}>
+                    {modeloPrecargadoNombre} (precargado)
+                  </option>
+                )}
                 {modelosFiltrados.map((modelo) => (
                   <option key={modelo.id} value={modelo.id}>
                     {modelo.name}
