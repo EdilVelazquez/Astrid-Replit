@@ -83,11 +83,6 @@ export default function CalendarioTecnico({
 
       if (error) throw error;
 
-      setServiciosConCheckIn(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(servicioReiniciar.id);
-        return newSet;
-      });
       setServiciosVueltaEnFalso(prev => {
         const newSet = new Set(prev);
         newSet.delete(servicioReiniciar.id);
@@ -653,7 +648,7 @@ export default function CalendarioTecnico({
         onClose={() => setServicioReiniciar(null)}
         onConfirm={handleReiniciarServicio}
         title="Reiniciar servicio"
-        message={servicioReiniciar ? `¿Estás seguro de que deseas reiniciar este servicio?\n\nCita: ${servicioReiniciar.appointment_name || 'Sin número'}\n\nEsto permitirá volver a ejecutar el servicio desde el inicio (check-in, prefolio, pruebas).` : ''}
+        message={servicioReiniciar ? `¿Estás seguro de que deseas reiniciar este servicio?\n\nCita: ${servicioReiniciar.appointment_name || 'Sin número'}\n\nEl servicio regresará al formulario inicial. El check-in ya validado se conserva.` : ''}
         confirmText={reiniciando ? 'Reiniciando...' : 'Reiniciar'}
         cancelText="Cancelar"
         variant="confirm"
