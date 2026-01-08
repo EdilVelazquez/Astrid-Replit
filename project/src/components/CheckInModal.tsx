@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigation, CheckCircle, XCircle, Loader2, X, AlertTriangle } from 'lucide-react';
+import { Navigation, CheckCircle, Loader2, X, AlertTriangle } from 'lucide-react';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { isWithinGeofence, Coordinates } from '../utils/haversine';
 import { ExpedienteServicio, CheckInAttempt } from '../types';
@@ -15,7 +15,7 @@ interface CheckInModalProps {
   onCheckInSuccess: (servicio: ExpedienteServicio) => void;
 }
 
-type CheckInState = 'idle' | 'requesting' | 'success' | 'denied' | 'error' | 'no_coords';
+type CheckInState = 'idle' | 'requesting' | 'success' | 'denied' | 'confirm_override' | 'error' | 'no_coords';
 
 export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: CheckInModalProps) {
   const { getCurrentLocation, status: gpsStatus, error: gpsError, resetState } = useGeolocation();
@@ -23,6 +23,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
   const [distance, setDistance] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+  const [pendingCheckInData, setPendingCheckInData] = useState<{ location: Coordinates; distance: number } | null>(null);
 
   if (!isOpen) return null;
 
@@ -60,6 +61,67 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
 
   const isTestService = servicio.appointment_name?.startsWith('AP-TEST') || 
                          servicio.is_test_service === true;
+
+  const saveCheckInToDatabase = async (_location: Coordinates) => {
+    setSaving(true);
+    
+    const checkInData: Record<string, unknown> = {
+      check_in_timestamp: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from('expedientes_servicio')
+      .update(checkInData)
+      .eq('id', servicio.id);
+
+    if (error) {
+      console.error('Error saving check-in:', error);
+      if (isTestService) {
+        console.log('🧪 [CHECK-IN] Servicio de prueba - continuando a pesar del error de BD');
+      } else {
+        setCheckInState('error');
+        setSaving(false);
+        return;
+      }
+    }
+
+    setSaving(false);
+    setCheckInState('success');
+    
+    const updatedServicio = {
+      ...servicio,
+      check_in_timestamp: new Date().toISOString()
+    };
+    
+    setTimeout(() => {
+      onCheckInSuccess(updatedServicio);
+      handleClose();
+    }, 2000);
+  };
+
+  const handleConfirmOverride = async () => {
+    if (!pendingCheckInData) return;
+    
+    console.log('⚠️ [CHECK-IN] Usuario confirmó check-in fuera de geocerca, distancia:', pendingCheckInData.distance, 'm');
+    
+    await saveCheckInAttempt(
+      servicio.appointment_name!,
+      pendingCheckInData.location.latitude,
+      pendingCheckInData.location.longitude,
+      pendingCheckInData.distance,
+      true
+    );
+    
+    await saveCheckInToDatabase(pendingCheckInData.location);
+  };
+
+  const handleCancelOverride = () => {
+    setPendingCheckInData(null);
+    setCheckInState('idle');
+    setDistance(null);
+    setUserLocation(null);
+    resetState();
+  };
 
   const handleCheckIn = async () => {
     if (!servicePoint && !isTestService) {
@@ -107,42 +169,10 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       );
 
       if (result.isWithin) {
-        setSaving(true);
-        
-        const checkInData: Record<string, unknown> = {
-          check_in_timestamp: new Date().toISOString()
-        };
-
-        const { error } = await supabase
-          .from('expedientes_servicio')
-          .update(checkInData)
-          .eq('id', servicio.id);
-
-        if (error) {
-          console.error('Error saving check-in:', error);
-          if (isTestService) {
-            console.log('🧪 [CHECK-IN] Servicio de prueba - continuando a pesar del error de BD');
-          } else {
-            setCheckInState('error');
-            setSaving(false);
-            return;
-          }
-        }
-
-        setSaving(false);
-        setCheckInState('success');
-        
-        const updatedServicio = {
-          ...servicio,
-          check_in_timestamp: new Date().toISOString()
-        };
-        
-        setTimeout(() => {
-          onCheckInSuccess(updatedServicio);
-          handleClose();
-        }, 2000);
+        await saveCheckInToDatabase(location);
       } else {
-        setCheckInState('denied');
+        setPendingCheckInData({ location, distance: result.distance });
+        setCheckInState('confirm_override');
       }
     } catch (err) {
       console.error('Error getting location:', err);
@@ -154,6 +184,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setCheckInState('idle');
     setDistance(null);
     setUserLocation(null);
+    setPendingCheckInData(null);
     resetState();
     onClose();
   };
@@ -162,6 +193,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setCheckInState('idle');
     setDistance(null);
     setUserLocation(null);
+    setPendingCheckInData(null);
     resetState();
   };
 
@@ -230,18 +262,27 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       );
     }
 
-    if (checkInState === 'denied') {
+    if (checkInState === 'confirm_override') {
+      const distanceText = pendingCheckInData 
+        ? pendingCheckInData.distance >= 1000 
+          ? `${(pendingCheckInData.distance / 1000).toFixed(1)} km`
+          : `${Math.round(pendingCheckInData.distance)} metros`
+        : '';
+      
       return (
         <div className="py-4">
           <div className="text-center mb-4">
-            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <XCircle className="w-8 h-8 text-red-600" />
+            <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle className="w-8 h-8 text-yellow-600" />
             </div>
-            <h3 className="text-xl font-bold text-red-800 mb-1">
-              Check-In Denegado
+            <h3 className="text-xl font-bold text-yellow-800 mb-1">
+              Ubicación no coincide
             </h3>
-            <p className="text-gray-500 text-sm">
-              Acércate más al punto de servicio para hacer check-in.
+            <p className="text-gray-600 text-sm mb-2">
+              Te encuentras a <span className="font-semibold text-yellow-700">{distanceText}</span> del punto de servicio.
+            </p>
+            <p className="text-gray-500 text-xs">
+              El radio permitido es de {GEOFENCE_RADIUS} metros.
             </p>
           </div>
           {servicePoint && userLocation && (
@@ -253,19 +294,24 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
               />
             </div>
           )}
-          <div className="flex gap-3 justify-center">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+            <p className="text-yellow-800 text-sm text-center">
+              ¿Deseas confirmar tu llegada de todas formas?
+            </p>
+          </div>
+          <div className="flex gap-3">
             <button
-              onClick={handleRetry}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+              onClick={handleCancelOverride}
+              className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
             >
-              <Navigation className="w-4 h-4" />
-              Intentar de nuevo
+              Cancelar
             </button>
             <button
-              onClick={handleClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              onClick={handleConfirmOverride}
+              className="flex-1 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] transition-colors flex items-center justify-center gap-2"
             >
-              Cerrar
+              <CheckCircle className="w-5 h-5" />
+              Confirmar check-in
             </button>
           </div>
         </div>
