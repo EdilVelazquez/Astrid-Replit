@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Navigation, CheckCircle, Loader2, X, AlertTriangle } from 'lucide-react';
-import { useGeolocation } from '../hooks/useGeolocation';
+import { Navigation, CheckCircle, Loader2, X, AlertTriangle, Crosshair } from 'lucide-react';
+import { useGeolocation, ExtendedCoordinates } from '../hooks/useGeolocation';
 import { isWithinGeofence, Coordinates } from '../utils/haversine';
 import { ExpedienteServicio, CheckInAttempt } from '../types';
 import { supabase } from '../supabaseClient';
 import { MapView } from './MapView';
 
 const GEOFENCE_RADIUS = 200;
+const LOW_ACCURACY_WARNING = 100;
 
 interface CheckInModalProps {
   isOpen: boolean;
@@ -25,12 +26,12 @@ const LOCATION_REASON_OPTIONS = [
 ];
 
 export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: CheckInModalProps) {
-  const { getCurrentLocation, status: gpsStatus, error: gpsError, resetState } = useGeolocation();
+  const { getCurrentLocation, status: gpsStatus, error: gpsError, resetState, attempts } = useGeolocation();
   const [checkInState, setCheckInState] = useState<CheckInState>('idle');
   const [distance, setDistance] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
-  const [pendingCheckInData, setPendingCheckInData] = useState<{ location: Coordinates; distance: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<ExtendedCoordinates | null>(null);
+  const [pendingCheckInData, setPendingCheckInData] = useState<{ location: ExtendedCoordinates; distance: number } | null>(null);
   const [locationReason, setLocationReason] = useState<LocationReason>('');
   const [locationReasonOther, setLocationReasonOther] = useState('');
 
@@ -180,17 +181,21 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setCheckInState('requesting');
     
     try {
-      let location: Coordinates;
+      let location: ExtendedCoordinates;
       let result: { isWithin: boolean; distance: number };
 
       if (isTestService) {
         console.log('🧪 [CHECK-IN] Servicio de prueba detectado - bypass de geocerca');
-        if (servicePoint) {
-          location = servicePoint;
-          result = { isWithin: true, distance: 0 };
-        } else {
-          location = { latitude: 19.4326, longitude: -99.1332 };
-          result = { isWithin: true, distance: 0 };
+        const testCoords = servicePoint || { latitude: 19.4326, longitude: -99.1332 };
+        location = {
+          ...testCoords,
+          accuracy: 0,
+          timestamp: Date.now(),
+          altitudeAccuracy: null,
+          method: 'unknown' as const,
+        };
+        result = { isWithin: true, distance: 0 };
+        if (!servicePoint) {
           console.log('⚠️ [CHECK-IN] Usando coordenadas por defecto (CDMX) - servicio sin coordenadas');
         }
         setUserLocation(location);
@@ -273,13 +278,19 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
             {saving ? 'Guardando check-in...' : 'Obteniendo tu ubicación...'}
           </p>
           <p className="text-gray-400 text-sm mt-2">
-            Asegúrate de tener el GPS activado
+            {saving ? '' : attempts > 0 ? `Mejorando precisión... (intento ${attempts})` : 'Asegúrate de tener el GPS activado'}
           </p>
         </div>
       );
     }
 
     if (checkInState === 'success') {
+      const accuracyColor = userLocation && userLocation.accuracy <= 50 
+        ? 'text-green-600' 
+        : userLocation && userLocation.accuracy <= LOW_ACCURACY_WARNING 
+          ? 'text-yellow-600' 
+          : 'text-red-600';
+      
       return (
         <div className="py-4">
           <div className="text-center mb-4">
@@ -293,6 +304,14 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
               Tu llegada ha sido registrada correctamente.
             </p>
           </div>
+          {userLocation && userLocation.accuracy > 0 && (
+            <div className="flex items-center justify-center gap-2 mb-3 text-xs">
+              <Crosshair className={`w-3 h-3 ${accuracyColor}`} />
+              <span className={accuracyColor}>
+                Precisión: {Math.round(userLocation.accuracy)}m
+              </span>
+            </div>
+          )}
           {servicePoint && userLocation && (
             <div className="mb-4">
               <MapView 
@@ -313,6 +332,13 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
           : `${Math.round(pendingCheckInData.distance)} metros`
         : '';
       
+      const overrideAccuracy = pendingCheckInData?.location.accuracy || 0;
+      const overrideAccuracyColor = overrideAccuracy <= 50 
+        ? 'text-green-600' 
+        : overrideAccuracy <= LOW_ACCURACY_WARNING 
+          ? 'text-yellow-600' 
+          : 'text-red-600';
+      
       return (
         <div className="py-4">
           <div className="text-center mb-4">
@@ -328,6 +354,14 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
             <p className="text-gray-500 text-xs">
               El radio permitido es de {GEOFENCE_RADIUS} metros.
             </p>
+            {overrideAccuracy > 0 && (
+              <div className="flex items-center justify-center gap-1 mt-2 text-xs">
+                <Crosshair className={`w-3 h-3 ${overrideAccuracyColor}`} />
+                <span className={overrideAccuracyColor}>
+                  Precisión GPS: {Math.round(overrideAccuracy)}m
+                </span>
+              </div>
+            )}
           </div>
           {servicePoint && userLocation && (
             <div className="mb-4">

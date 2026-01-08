@@ -1,0 +1,83 @@
+Revisa y corrige a detalle la detección de GPS en navegador durante el check-in, porque actualmente la ubicación que detecta es incorrecta (estoy físicamente en un lugar y el sistema me ubica en otro). No quiero una ubicación estimada/aproximada; necesito la mejor precisión posible del dispositivo.
+
+1) Auditar la fuente real de ubicación
+
+Confirma si el sistema está usando GPS real del dispositivo (navigator.geolocation) o si en algún punto está cayendo a:
+
+geolocalización por IP,
+
+cache de ubicación,
+
+valores previos persistidos,
+
+o cualquier fallback silencioso.
+
+Si hay fallback, debe quedar explícito (en logs) y no usarse como “ubicación real” para validación.
+
+2) Configuración correcta de geolocalización
+
+Asegura que la obtención de ubicación use navigator.geolocation.getCurrentPosition o watchPosition con parámetros apropiados:
+
+enableHighAccuracy: true
+
+maximumAge: 0 (sin cache)
+
+timeout razonable (no instantáneo)
+
+Evitar lecturas “viejas” por maximumAge alto o reutilización de una coordenada anterior.
+
+3) Validar calidad de lectura antes de aceptarla
+
+Al obtener coordenadas, registrar y evaluar:
+
+coords.accuracy (metros)
+
+coords.latitude, coords.longitude
+
+timestamp
+
+coords.altitudeAccuracy si existe
+
+Reglas:
+
+Si accuracy es mala (ej. > 50m / 100m, define un umbral), no aceptar como ubicación final inmediatamente.
+
+Reintentar/actualizar lectura (p.ej. con watchPosition) hasta obtener una precisión aceptable o hasta agotar un límite controlado.
+
+4) Evitar estados erróneos por permisos o contexto
+
+Verificar que:
+
+La app corre en HTTPS (requisito para geolocation en la mayoría de navegadores).
+
+El permiso de ubicación está concedido y no en modo “approximate” (donde aplique).
+
+Se solicita geolocalización desde una acción del usuario (click) si el navegador lo requiere.
+
+5) Logging técnico para diagnóstico
+
+Agregar logs (solo consola o modo debug) que indiquen:
+
+Método usado: getCurrentPosition / watchPosition / fallback.
+
+Coordenadas + accuracy + timestamp.
+
+Número de intentos y cuál se eligió como final.
+
+Razón si se degradó a fallback (si ocurre).
+
+6) Resultado esperado
+
+El check-in debe usar coordenadas actuales, sin cache.
+
+La ubicación debe ser consistentemente correcta y precisa.
+
+Si la precisión no es suficiente, el sistema debe:
+
+reintentar,
+
+o indicar claramente que no se pudo obtener precisión adecuada,
+
+pero no debe asumir ubicaciones aproximadas como válidas sin control.
+
+Implementa estos ajustes y valida con pruebas reales en navegador móvil y escritorio para confirmar que la ubicación coincide con la real.
