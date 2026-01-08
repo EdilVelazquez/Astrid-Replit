@@ -16,6 +16,13 @@ interface CheckInModalProps {
 }
 
 type CheckInState = 'idle' | 'requesting' | 'success' | 'denied' | 'confirm_override' | 'error' | 'no_coords';
+type LocationReason = 'ubicacion_unidad' | 'direccion_erronea' | 'otro' | '';
+
+const LOCATION_REASON_OPTIONS = [
+  { value: 'ubicacion_unidad', label: 'No estaba la unidad en la ubicación' },
+  { value: 'direccion_erronea', label: 'Dirección errónea' },
+  { value: 'otro', label: 'Otro' },
+];
 
 export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: CheckInModalProps) {
   const { getCurrentLocation, status: gpsStatus, error: gpsError, resetState } = useGeolocation();
@@ -24,6 +31,8 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
   const [saving, setSaving] = useState(false);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [pendingCheckInData, setPendingCheckInData] = useState<{ location: Coordinates; distance: number } | null>(null);
+  const [locationReason, setLocationReason] = useState<LocationReason>('');
+  const [locationReasonOther, setLocationReasonOther] = useState('');
 
   if (!isOpen) return null;
 
@@ -62,12 +71,28 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
   const isTestService = servicio.appointment_name?.startsWith('AP-TEST') || 
                          servicio.is_test_service === true;
 
-  const saveCheckInToDatabase = async (_location: Coordinates) => {
+  const saveCheckInToDatabase = async (
+    location: Coordinates, 
+    distanceMeters: number,
+    reason?: LocationReason,
+    reasonOther?: string
+  ) => {
     setSaving(true);
     
+    const distanceKm = distanceMeters / 1000;
+    
     const checkInData: Record<string, unknown> = {
-      check_in_timestamp: new Date().toISOString()
+      check_in_timestamp: new Date().toISOString(),
+      check_in_latitude: location.latitude,
+      check_in_longitude: location.longitude,
+      check_in_distance: distanceMeters,
+      technician_location_checkin: `${location.latitude},${location.longitude}`,
+      km_diferencia_checkin: parseFloat(distanceKm.toFixed(3)),
+      checkin_location_reason: reason || null,
+      checkin_location_reason_other: (reason === 'otro' && reasonOther) ? reasonOther : null,
     };
+
+    console.log('📍 [CHECK-IN] Guardando datos:', checkInData);
 
     const { error } = await supabase
       .from('expedientes_servicio')
@@ -102,7 +127,15 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
   const handleConfirmOverride = async () => {
     if (!pendingCheckInData) return;
     
-    console.log('⚠️ [CHECK-IN] Usuario confirmó check-in fuera de geocerca, distancia:', pendingCheckInData.distance, 'm');
+    if (!locationReason) {
+      return;
+    }
+    
+    if (locationReason === 'otro' && !locationReasonOther.trim()) {
+      return;
+    }
+    
+    console.log('⚠️ [CHECK-IN] Usuario confirmó check-in fuera de geocerca, distancia:', pendingCheckInData.distance, 'm, motivo:', locationReason);
     
     await saveCheckInAttempt(
       servicio.appointment_name!,
@@ -112,14 +145,23 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       true
     );
     
-    await saveCheckInToDatabase(pendingCheckInData.location);
+    await saveCheckInToDatabase(
+      pendingCheckInData.location, 
+      pendingCheckInData.distance,
+      locationReason,
+      locationReasonOther
+    );
   };
+  
+  const canConfirmOverride = locationReason !== '' && (locationReason !== 'otro' || locationReasonOther.trim() !== '');
 
   const handleCancelOverride = () => {
     setPendingCheckInData(null);
     setCheckInState('idle');
     setDistance(null);
     setUserLocation(null);
+    setLocationReason('');
+    setLocationReasonOther('');
     resetState();
   };
 
@@ -169,7 +211,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       );
 
       if (result.isWithin) {
-        await saveCheckInToDatabase(location);
+        await saveCheckInToDatabase(location, result.distance);
       } else {
         setPendingCheckInData({ location, distance: result.distance });
         setCheckInState('confirm_override');
@@ -185,6 +227,8 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setDistance(null);
     setUserLocation(null);
     setPendingCheckInData(null);
+    setLocationReason('');
+    setLocationReasonOther('');
     resetState();
     onClose();
   };
@@ -294,11 +338,50 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
               />
             </div>
           )}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-            <p className="text-yellow-800 text-sm text-center">
-              ¿Deseas confirmar tu llegada de todas formas?
-            </p>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ¿Por qué la ubicación no coincide? <span className="text-red-500">*</span>
+            </label>
+            <div className="space-y-2">
+              {LOCATION_REASON_OPTIONS.map((option) => (
+                <label 
+                  key={option.value}
+                  className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                    locationReason === option.value 
+                      ? 'border-[#0F1C3F] bg-blue-50' 
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="locationReason"
+                    value={option.value}
+                    checked={locationReason === option.value}
+                    onChange={(e) => setLocationReason(e.target.value as LocationReason)}
+                    className="w-4 h-4 text-[#0F1C3F]"
+                  />
+                  <span className="ml-3 text-sm text-gray-700">{option.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
+          
+          {locationReason === 'otro' && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Especifica el motivo <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={locationReasonOther}
+                onChange={(e) => setLocationReasonOther(e.target.value)}
+                placeholder="Describe el motivo..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0F1C3F] focus:border-transparent resize-none"
+                rows={3}
+              />
+            </div>
+          )}
+          
           <div className="flex gap-3">
             <button
               onClick={handleCancelOverride}
@@ -308,7 +391,12 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
             </button>
             <button
               onClick={handleConfirmOverride}
-              className="flex-1 px-4 py-3 bg-[#0F1C3F] text-white rounded-lg font-medium hover:bg-[#1A2B52] transition-colors flex items-center justify-center gap-2"
+              disabled={!canConfirmOverride}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                canConfirmOverride 
+                  ? 'bg-[#0F1C3F] text-white hover:bg-[#1A2B52]' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
             >
               <CheckCircle className="w-5 h-5" />
               Confirmar check-in

@@ -54,7 +54,19 @@ project/
 3. **Check-In con Geocerca (OBLIGATORIO)**: Técnico hace clic en "Check-In" para confirmar llegada
    - Obtiene ubicación GPS del dispositivo
    - Valida que esté dentro de 200 metros del punto de servicio (usando coordenadas service_latitude/service_longitude)
-   - Guarda timestamp, coordenadas y distancia en expedientes_servicio (check_in_timestamp, check_in_latitude, check_in_longitude, check_in_distance)
+   - **Datos guardados en expedientes_servicio:**
+     - `check_in_timestamp` - Fecha/hora del check-in
+     - `check_in_latitude`, `check_in_longitude` - Coordenadas del técnico
+     - `check_in_distance` - Distancia en metros al punto de servicio
+     - `technician_location_checkin` - Ubicación en formato "lat,lng"
+     - `km_diferencia_checkin` - Distancia en kilómetros
+     - `checkin_location_reason` - Motivo si ubicación no coincide (ubicacion_unidad, direccion_erronea, otro, null)
+     - `checkin_location_reason_other` - Texto libre cuando motivo es "otro"
+   - **Si ubicación NO coincide** (fuera de 200m):
+     - Muestra modal de confirmación con distancia detectada
+     - Picklist obligatorio: "No estaba la unidad en la ubicación", "Dirección errónea", "Otro"
+     - Si selecciona "Otro" → campo de texto obligatorio
+     - Usuario puede confirmar o cancelar
    - Muestra badge "Llegada confirmada" si exitoso
    - **Servicios de prueba**: Citas que inician con "AP-TEST-" o tienen is_test_service=true omiten validación de geocerca pero registran check-in
 4. Hace clic en botón "Iniciar servicio" (SOLO disponible después de Check-In exitoso)
