@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "build": "cd project && npm install && npm run build",
+    "start": "cd project && node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
