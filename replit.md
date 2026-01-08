@@ -61,6 +61,7 @@ project/
    - **Datos guardados en check_in_attempts (historial completo):**
      - `appointment_name` - Nombre de la cita
      - `latitude`, `longitude` - Coordenadas GPS reales del técnico
+     - `service_latitude`, `service_longitude` - Coordenadas del punto de servicio esperado
      - `distance_meters` - Distancia en metros al punto de servicio
      - `km_diferencia` - Distancia en kilómetros
      - `was_successful` - Si el check-in fue exitoso

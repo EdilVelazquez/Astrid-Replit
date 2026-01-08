@@ -56,6 +56,8 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       appointment_name: appointmentName,
       latitude,
       longitude,
+      service_latitude: servicePoint?.latitude,
+      service_longitude: servicePoint?.longitude,
       distance_meters: distanceMeters,
       was_successful: wasSuccessful,
       geofence_radius: GEOFENCE_RADIUS,

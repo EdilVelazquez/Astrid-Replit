@@ -158,6 +158,8 @@ export interface CheckInAttempt {
   attempt_timestamp?: string;
   latitude: number;
   longitude: number;
+  service_latitude?: number;
+  service_longitude?: number;
   distance_meters: number;
   was_successful: boolean;
   geofence_radius: number;
