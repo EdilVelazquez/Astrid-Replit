@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigation, CheckCircle, XCircle, Loader2, X, AlertTriangle } from 'lucide-react';
+import { Navigation, CheckCircle, Loader2, X, AlertTriangle } from 'lucide-react';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { isWithinGeofence, Coordinates } from '../utils/haversine';
 import { ExpedienteServicio, CheckInAttempt } from '../types';
@@ -15,7 +15,14 @@ interface CheckInModalProps {
   onCheckInSuccess: (servicio: ExpedienteServicio) => void;
 }
 
-type CheckInState = 'idle' | 'requesting' | 'success' | 'denied' | 'error' | 'no_coords';
+type CheckInState = 'idle' | 'requesting' | 'success' | 'denied' | 'confirm_override' | 'error' | 'no_coords';
+type LocationReason = 'ubicacion_unidad' | 'direccion_erronea' | 'otro' | '';
+
+const LOCATION_REASON_OPTIONS = [
+  { value: 'ubicacion_unidad', label: 'No estaba la unidad en la ubicación' },
+  { value: 'direccion_erronea', label: 'Dirección errónea' },
+  { value: 'otro', label: 'Otro' },
+];
 
 export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: CheckInModalProps) {
   const { getCurrentLocation, status: gpsStatus, error: gpsError, resetState } = useGeolocation();
@@ -23,6 +30,9 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
   const [distance, setDistance] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+  const [pendingCheckInData, setPendingCheckInData] = useState<{ location: Coordinates; distance: number } | null>(null);
+  const [locationReason, setLocationReason] = useState<LocationReason>('');
+  const [locationReasonOther, setLocationReasonOther] = useState('');
 
   if (!isOpen) return null;
 
@@ -36,16 +46,27 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     latitude: number,
     longitude: number,
     distanceMeters: number,
-    wasSuccessful: boolean
+    wasSuccessful: boolean,
+    reason?: LocationReason,
+    reasonOther?: string
   ): Promise<boolean> => {
+    const kmDiferencia = distanceMeters / 1000;
+    
     const attempt: Omit<CheckInAttempt, 'id' | 'attempt_timestamp'> = {
       appointment_name: appointmentName,
       latitude,
       longitude,
+      service_latitude: servicePoint?.latitude,
+      service_longitude: servicePoint?.longitude,
       distance_meters: distanceMeters,
       was_successful: wasSuccessful,
-      geofence_radius: GEOFENCE_RADIUS
+      geofence_radius: GEOFENCE_RADIUS,
+      km_diferencia: parseFloat(kmDiferencia.toFixed(3)),
+      checkin_location_reason: reason || null,
+      checkin_location_reason_other: (reason === 'otro' && reasonOther) ? reasonOther : null,
     };
+
+    console.log('📍 [CHECK-IN] Guardando intento en check_in_attempts:', attempt);
 
     const { error } = await supabase
       .from('check_in_attempts')
@@ -58,8 +79,94 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     return true;
   };
 
+  const isTestService = servicio.appointment_name?.startsWith('AP-TEST') || 
+                         servicio.is_test_service === true;
+
+  const saveCheckInToDatabase = async (
+    location: Coordinates, 
+    distanceMeters: number
+  ) => {
+    setSaving(true);
+    
+    const checkInData: Record<string, unknown> = {
+      check_in_timestamp: new Date().toISOString(),
+      check_in_latitude: location.latitude,
+      check_in_longitude: location.longitude,
+      check_in_distance: distanceMeters,
+    };
+
+    console.log('📍 [CHECK-IN] Guardando en expedientes_servicio:', checkInData);
+
+    const { error } = await supabase
+      .from('expedientes_servicio')
+      .update(checkInData)
+      .eq('id', servicio.id);
+
+    if (error) {
+      console.error('Error saving check-in:', error);
+      if (isTestService) {
+        console.log('🧪 [CHECK-IN] Servicio de prueba - continuando a pesar del error de BD');
+      } else {
+        setCheckInState('error');
+        setSaving(false);
+        return;
+      }
+    }
+
+    setSaving(false);
+    setCheckInState('success');
+    
+    const updatedServicio = {
+      ...servicio,
+      check_in_timestamp: new Date().toISOString()
+    };
+    
+    setTimeout(() => {
+      onCheckInSuccess(updatedServicio);
+      handleClose();
+    }, 2000);
+  };
+
+  const handleConfirmOverride = async () => {
+    if (!pendingCheckInData) return;
+    
+    if (!locationReason) {
+      return;
+    }
+    
+    if (locationReason === 'otro' && !locationReasonOther.trim()) {
+      return;
+    }
+    
+    console.log('⚠️ [CHECK-IN] Usuario confirmó check-in fuera de geocerca, distancia:', pendingCheckInData.distance, 'm, motivo:', locationReason);
+    
+    await saveCheckInAttempt(
+      servicio.appointment_name!,
+      pendingCheckInData.location.latitude,
+      pendingCheckInData.location.longitude,
+      pendingCheckInData.distance,
+      true,
+      locationReason,
+      locationReasonOther
+    );
+    
+    await saveCheckInToDatabase(pendingCheckInData.location, pendingCheckInData.distance);
+  };
+  
+  const canConfirmOverride = locationReason !== '' && (locationReason !== 'otro' || locationReasonOther.trim() !== '');
+
+  const handleCancelOverride = () => {
+    setPendingCheckInData(null);
+    setCheckInState('idle');
+    setDistance(null);
+    setUserLocation(null);
+    setLocationReason('');
+    setLocationReasonOther('');
+    resetState();
+  };
+
   const handleCheckIn = async () => {
-    if (!servicePoint) {
+    if (!servicePoint && !isTestService) {
       setCheckInState('no_coords');
       return;
     }
@@ -73,11 +180,27 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setCheckInState('requesting');
     
     try {
-      const location = await getCurrentLocation();
-      setUserLocation(location);
-      
-      const result = isWithinGeofence(location, servicePoint, GEOFENCE_RADIUS);
-      setDistance(result.distance);
+      let location: Coordinates;
+      let result: { isWithin: boolean; distance: number };
+
+      if (isTestService) {
+        console.log('🧪 [CHECK-IN] Servicio de prueba detectado - bypass de geocerca');
+        if (servicePoint) {
+          location = servicePoint;
+          result = { isWithin: true, distance: 0 };
+        } else {
+          location = { latitude: 19.4326, longitude: -99.1332 };
+          result = { isWithin: true, distance: 0 };
+          console.log('⚠️ [CHECK-IN] Usando coordenadas por defecto (CDMX) - servicio sin coordenadas');
+        }
+        setUserLocation(location);
+        setDistance(0);
+      } else {
+        location = await getCurrentLocation();
+        setUserLocation(location);
+        result = isWithinGeofence(location, servicePoint!, GEOFENCE_RADIUS);
+        setDistance(result.distance);
+      }
 
       await saveCheckInAttempt(
         servicio.appointment_name,
@@ -88,42 +211,10 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       );
 
       if (result.isWithin) {
-        setSaving(true);
-        
-        const { error } = await supabase
-          .from('expedientes_servicio')
-          .update({
-            check_in_timestamp: new Date().toISOString(),
-            check_in_latitude: location.latitude,
-            check_in_longitude: location.longitude,
-            check_in_distance: result.distance
-          })
-          .eq('id', servicio.id);
-
-        if (error) {
-          console.error('Error saving check-in:', error);
-          setCheckInState('error');
-          setSaving(false);
-          return;
-        }
-
-        setSaving(false);
-        setCheckInState('success');
-        
-        const updatedServicio = {
-          ...servicio,
-          check_in_timestamp: new Date().toISOString(),
-          check_in_latitude: location.latitude,
-          check_in_longitude: location.longitude,
-          check_in_distance: result.distance
-        };
-        
-        setTimeout(() => {
-          onCheckInSuccess(updatedServicio);
-          handleClose();
-        }, 2000);
+        await saveCheckInToDatabase(location, result.distance);
       } else {
-        setCheckInState('denied');
+        setPendingCheckInData({ location, distance: result.distance });
+        setCheckInState('confirm_override');
       }
     } catch (err) {
       console.error('Error getting location:', err);
@@ -135,6 +226,9 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setCheckInState('idle');
     setDistance(null);
     setUserLocation(null);
+    setPendingCheckInData(null);
+    setLocationReason('');
+    setLocationReasonOther('');
     resetState();
     onClose();
   };
@@ -143,6 +237,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setCheckInState('idle');
     setDistance(null);
     setUserLocation(null);
+    setPendingCheckInData(null);
     resetState();
   };
 
@@ -211,18 +306,27 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       );
     }
 
-    if (checkInState === 'denied') {
+    if (checkInState === 'confirm_override') {
+      const distanceText = pendingCheckInData 
+        ? pendingCheckInData.distance >= 1000 
+          ? `${(pendingCheckInData.distance / 1000).toFixed(1)} km`
+          : `${Math.round(pendingCheckInData.distance)} metros`
+        : '';
+      
       return (
         <div className="py-4">
           <div className="text-center mb-4">
-            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <XCircle className="w-8 h-8 text-red-600" />
+            <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle className="w-8 h-8 text-yellow-600" />
             </div>
-            <h3 className="text-xl font-bold text-red-800 mb-1">
-              Check-In Denegado
+            <h3 className="text-xl font-bold text-yellow-800 mb-1">
+              Ubicación no coincide
             </h3>
-            <p className="text-gray-500 text-sm">
-              Acércate más al punto de servicio para hacer check-in.
+            <p className="text-gray-600 text-sm mb-2">
+              Te encuentras a <span className="font-semibold text-yellow-700">{distanceText}</span> del punto de servicio.
+            </p>
+            <p className="text-gray-500 text-xs">
+              El radio permitido es de {GEOFENCE_RADIUS} metros.
             </p>
           </div>
           {servicePoint && userLocation && (
@@ -234,26 +338,76 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
               />
             </div>
           )}
-          <div className="flex gap-3 justify-center">
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ¿Por qué la ubicación no coincide? <span className="text-red-500">*</span>
+            </label>
+            <div className="space-y-2">
+              {LOCATION_REASON_OPTIONS.map((option) => (
+                <label 
+                  key={option.value}
+                  className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                    locationReason === option.value 
+                      ? 'border-[#0F1C3F] bg-blue-50' 
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="locationReason"
+                    value={option.value}
+                    checked={locationReason === option.value}
+                    onChange={(e) => setLocationReason(e.target.value as LocationReason)}
+                    className="w-4 h-4 text-[#0F1C3F]"
+                  />
+                  <span className="ml-3 text-sm text-gray-700">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          
+          {locationReason === 'otro' && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Especifica el motivo <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={locationReasonOther}
+                onChange={(e) => setLocationReasonOther(e.target.value)}
+                placeholder="Describe el motivo..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0F1C3F] focus:border-transparent resize-none"
+                rows={3}
+              />
+            </div>
+          )}
+          
+          <div className="flex gap-3">
             <button
-              onClick={handleRetry}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+              onClick={handleCancelOverride}
+              className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
             >
-              <Navigation className="w-4 h-4" />
-              Intentar de nuevo
+              Cancelar
             </button>
             <button
-              onClick={handleClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              onClick={handleConfirmOverride}
+              disabled={!canConfirmOverride}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                canConfirmOverride 
+                  ? 'bg-[#0F1C3F] text-white hover:bg-[#1A2B52]' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
             >
-              Cerrar
+              <CheckCircle className="w-5 h-5" />
+              Confirmar check-in
             </button>
           </div>
         </div>
       );
     }
 
-    if (checkInState === 'error' || gpsStatus === 'error' || gpsStatus === 'denied') {
+    const gpsHasError = !isTestService && (gpsStatus === 'error' || gpsStatus === 'denied');
+    if (checkInState === 'error' || gpsHasError) {
       return (
         <div className="text-center py-6">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -1,0 +1,100 @@
+Corregir el bloqueo crítico al reanudar un servicio que ya avanzó a Documentación final, ya que actualmente el sistema no está persistiendo correctamente el estado del flujo.
+
+Problema actual (persistente)
+
+El servicio avanza correctamente hasta Documentación final.
+
+Al volver a la agenda y reanudar el servicio:
+
+El sistema ignora que las pruebas ya fueron superadas.
+
+Regresa a Pruebas del dispositivo.
+
+Marca las pruebas como completadas, pero:
+
+No muestra el botón para avanzar.
+
+Mantiene el mensaje:
+“Completa las siguientes pruebas para continuar: Ignición, Ubicación”
+
+Los botones quedan bloqueados, impidiendo continuar el flujo.
+
+Esto deja el servicio en un estado inconsistente e irrecuperable.
+
+Comportamiento obligatorio requerido
+
+Persistencia del estado del flujo
+
+El sistema debe guardar explícitamente el último checkpoint válido del servicio.
+
+Si el último checkpoint es Documentación final:
+
+Ese debe ser el punto de retorno al reanudar.
+
+No debe re-evaluarse ni recalcularse el estado de pruebas.
+
+Reanudación correcta
+
+Al reanudar un servicio:
+
+El sistema debe:
+
+Leer el estado persistido.
+
+Posicionar el flujo exactamente en ese estado.
+
+Si el estado es Documentación final:
+
+No mostrar pruebas.
+
+No validar ignición, ubicación u otras pruebas.
+
+No mostrar mensajes de “Completa las siguientes pruebas”.
+
+Validaciones por etapa
+
+Las validaciones de pruebas:
+
+Solo deben ejecutarse si el servicio está en la etapa de pruebas.
+
+Nunca si el servicio ya avanzó a una etapa posterior.
+
+El botón de avance de pruebas:
+
+No debe ser requerido ni evaluado si el servicio ya superó esa etapa.
+
+Excepciones controladas
+
+El flujo solo puede regresar a pruebas si ocurre alguna de estas acciones explícitas:
+
+Cambiar dispositivo.
+
+Reiniciar pruebas.
+
+Reiniciar servicio.
+
+Fuera de estos casos, no se debe retroceder el flujo.
+
+Bloqueos
+
+No debe existir ningún escenario donde:
+
+Las pruebas estén marcadas como completas,
+
+El flujo esté bloqueado,
+
+Y no exista forma de avanzar ni continuar.
+
+Objetivo final
+
+Garantizar que:
+
+El estado del servicio sea determinístico y persistente.
+
+Reanudar un servicio no recalcula etapas anteriores.
+
+El flujo nunca quede en un estado bloqueado.
+
+Documentación final sea siempre accesible si ya fue alcanzada.
+
+Este ajuste es crítico para la estabilidad del flujo y debe resolverse sin agregar nuevas pantallas ni pasos, únicamente corrigiendo la gestión del estado y la reanudación.

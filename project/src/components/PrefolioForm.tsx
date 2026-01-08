@@ -4,16 +4,24 @@ import { guardarPrefolioDatos, guardarPrefolioFotos } from '../services/prefolio
 import { buscarEquipoEnInventario } from '../services/zohoInventoryService';
 import { notificarInicioTrabajo, notificarCreacionAsset, notificarEdicionAsset } from '../services/serviceTransitionService';
 import { supabase } from '../supabaseClient';
-import { CheckCircle, Loader2, AlertCircle, Camera, FileImage, QrCode, X, MapPin, Calendar, User, Building, Truck, Server } from 'lucide-react';
+import { CheckCircle, Loader2, AlertCircle, Camera, FileImage, QrCode, X, MapPin, Calendar, User, Building, Truck, Server, Plus, Trash2 } from 'lucide-react';
 import { QRScanner } from './QRScanner';
 import { VinScannerWithPhoto } from './VinScannerWithPhoto';
 import { PlacaScannerWithPhoto } from './PlacaScannerWithPhoto';
 import { traducirPruebasDesdeInstallationDetails, formatearFecha } from '../utils';
 
+interface FotoAdicional {
+  id: string;
+  descripcion: string;
+  fotos: File[];
+  previews: string[];
+}
+
 interface PrefolioFormProps {
   expediente: ExpedienteServicio;
   onCompleted: () => void;
   onClose?: () => void;
+  onLogConsola?: (msg: string) => void;
 }
 
 interface VehicleBrand {
@@ -27,7 +35,7 @@ interface VehicleModel {
   name: string;
 }
 
-export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: PrefolioFormProps) {
+export function PrefolioForm({ expediente, onCompleted, onClose: _onClose, onLogConsola }: PrefolioFormProps) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -64,12 +72,18 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
   const [fotoVin, setFotoVin] = useState<File | null>(null);
   const [fotoPlacas, setFotoPlacas] = useState<File | null>(null);
   const [fotoTablero, setFotoTablero] = useState<File | null>(null);
+  const [fotosAdicionales, setFotosAdicionales] = useState<FotoAdicional[]>([]);
 
   const [marcas, setMarcas] = useState<VehicleBrand[]>([]);
   const [modelos, setModelos] = useState<VehicleModel[]>([]);
   const [modelosFiltrados, setModelosFiltrados] = useState<VehicleModel[]>([]);
   const [mostrarQRScanner, setMostrarQRScanner] = useState(false);
   const inicializacionCompletada = useRef(false);
+  
+  const [marcaPrecargadaNombre, setMarcaPrecargadaNombre] = useState<string | null>(null);
+  const [modeloPrecargadoNombre, setModeloPrecargadoNombre] = useState<string | null>(null);
+  const VIRTUAL_MARCA_ID = -999;
+  const VIRTUAL_MODELO_ID = -999;
 
   useEffect(() => {
     cargarCatalogos();
@@ -82,108 +96,72 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
   useEffect(() => {
     const inicializarMarcaYModelo = async () => {
       if (inicializacionCompletada.current) {
-        console.log('⏭️ Inicialización ya completada, saltando...');
         return;
       }
       if (marcas.length === 0 || modelos.length === 0) {
-        console.log('⏸️ Esperando catálogos...', { marcas: marcas.length, modelos: modelos.length });
         return;
       }
 
       const marcaNombre = expediente.asset_marca;
       const modeloNombre = expediente.asset_submarca;
 
-      console.log('🔧 Inicializando marca y modelo automáticamente...');
-      console.log(`📋 Marca: ${marcaNombre}`);
-      console.log(`📋 Modelo: ${modeloNombre}`);
-      console.log(`📊 Modelos disponibles: ${modelos.length}`);
-
       let finalMarcaId: string | null = null;
+      let usandoMarcaVirtual = false;
 
       if (marcaNombre) {
         const marcaExistente = marcas.find((m) => m.name.toLowerCase() === marcaNombre.toLowerCase());
         if (marcaExistente) {
           finalMarcaId = marcaExistente.id.toString();
-          console.log(`✓ Marca encontrada: ${marcaExistente.name} (ID: ${finalMarcaId})`);
           setMarcaId(finalMarcaId);
         } else {
-          console.log(`⚠️ Marca "${marcaNombre}" no existe, creándola...`);
           const nuevoMarcaId = await crearMarcaSiNoExiste(marcaNombre);
           if (nuevoMarcaId) {
             finalMarcaId = nuevoMarcaId.toString();
             await cargarCatalogos();
             setMarcaId(finalMarcaId);
-            console.log(`✅ Marca creada: ${marcaNombre} (ID: ${finalMarcaId})`);
+          } else {
+            usandoMarcaVirtual = true;
+            setMarcaPrecargadaNombre(marcaNombre);
+            setMarcaId(VIRTUAL_MARCA_ID.toString());
           }
         }
       }
 
       if (modeloNombre) {
-        console.log(`🔍 Buscando modelo "${modeloNombre}"...`);
         const modelosActualizados = await obtenerModelosActualizados();
-        console.log(`📊 Total de modelos actualizados: ${modelosActualizados.length}`);
 
         const modeloExistente = modelosActualizados.find(
           (m) => m.name.toLowerCase() === modeloNombre.toLowerCase()
         );
 
         if (modeloExistente) {
-          console.log(`✓ Modelo encontrado: ${modeloExistente.name} (ID: ${modeloExistente.id})`);
           setModeloId(modeloExistente.id.toString());
-          // Asegurar que el modelo esté en la lista filtrada
           setModelosFiltrados(modelosActualizados);
-          console.log(`📊 Modelos filtrados actualizados: ${modelosActualizados.length}`);
         } else {
-          console.log(`⚠️ Modelo "${modeloNombre}" no existe en base de datos, creándolo...`);
-
-          let brandIdParaModelo = finalMarcaId ? parseInt(finalMarcaId, 10) : null;
-          console.log(`🏷️ Brand ID para crear modelo: ${brandIdParaModelo}`);
+          let brandIdParaModelo = finalMarcaId && !usandoMarcaVirtual ? parseInt(finalMarcaId, 10) : null;
 
           if (!brandIdParaModelo && marcas.length > 0) {
-            console.log('⚠️ No hay marca definida, usando marca genérica...');
-            let marcaGenerica = marcas.find((m) => m.name.toLowerCase() === 'genérico' || m.name.toLowerCase() === 'generico');
-
-            if (!marcaGenerica) {
-              console.log('📝 Creando marca genérica...');
-              const idMarcaGenerica = await crearMarcaSiNoExiste('Genérico');
-              if (idMarcaGenerica) {
-                await cargarCatalogos();
-                const marcasActualizadas = await obtenerMarcasActualizadas();
-                marcaGenerica = marcasActualizadas.find((m) => m.id === idMarcaGenerica);
-                console.log(`✅ Marca genérica creada: ID ${idMarcaGenerica}`);
-              }
-            } else {
-              console.log(`✓ Marca genérica encontrada: ID ${marcaGenerica.id}`);
-            }
-
+            const marcaGenerica = marcas.find((m) => m.name.toLowerCase() === 'genérico' || m.name.toLowerCase() === 'generico');
             if (marcaGenerica) {
               brandIdParaModelo = marcaGenerica.id;
             }
           }
 
           if (brandIdParaModelo) {
-            console.log(`📝 Creando modelo "${modeloNombre}" con brand_id: ${brandIdParaModelo}...`);
-            const nuevoModeloId = await crearModeloSiNoExiste(
-              brandIdParaModelo,
-              modeloNombre
-            );
+            const nuevoModeloId = await crearModeloSiNoExiste(brandIdParaModelo, modeloNombre);
             if (nuevoModeloId) {
-              console.log(`✅ Modelo creado con ID: ${nuevoModeloId}, recargando catálogos...`);
               await cargarCatalogos();
-
-              // Obtener los modelos actualizados y actualizar el estado
               const modelosActualizadosNuevos = await obtenerModelosActualizados();
               setModelos(modelosActualizadosNuevos);
               setModelosFiltrados(modelosActualizadosNuevos);
-
               setModeloId(nuevoModeloId.toString());
-              console.log(`✅ Modelo seleccionado: ${modeloNombre} (ID: ${nuevoModeloId})`);
-              console.log(`📊 Total de modelos después de crear: ${modelosActualizadosNuevos.length}`);
             } else {
-              console.error(`❌ Error al crear modelo "${modeloNombre}"`);
+              setModeloPrecargadoNombre(modeloNombre);
+              setModeloId(VIRTUAL_MODELO_ID.toString());
             }
           } else {
-            console.error('❌ No se pudo crear el modelo: no hay brand_id disponible');
+            setModeloPrecargadoNombre(modeloNombre);
+            setModeloId(VIRTUAL_MODELO_ID.toString());
           }
         }
       }
@@ -193,26 +171,6 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
 
     inicializarMarcaYModelo();
   }, [marcas, modelos]);
-
-  const obtenerMarcasActualizadas = async (): Promise<VehicleBrand[]> => {
-    try {
-      const { data: brandsData, error: brandsError } = await supabase
-        .from('vehicle_brands')
-        .select('id, name')
-        .eq('active', true)
-        .order('name', { ascending: true });
-
-      if (brandsError) {
-        console.error('Error obteniendo marcas actualizadas:', brandsError);
-        return [];
-      }
-
-      return (brandsData as VehicleBrand[]) || [];
-    } catch (err) {
-      console.error('Error inesperado obteniendo marcas:', err);
-      return [];
-    }
-  };
 
   const obtenerModelosActualizados = async (): Promise<VehicleModel[]> => {
     try {
@@ -363,6 +321,56 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
     if (e.target.files && e.target.files[0]) {
       setFotoTablero(e.target.files[0]);
     }
+  };
+
+  const agregarBloqueAdicional = () => {
+    if (fotosAdicionales.length >= 5) return;
+    setFotosAdicionales(prev => [...prev, {
+      id: `adicional-${Date.now()}`,
+      descripcion: '',
+      fotos: [],
+      previews: []
+    }]);
+  };
+
+  const eliminarBloqueAdicional = (id: string) => {
+    setFotosAdicionales(prev => prev.filter(bloque => bloque.id !== id));
+  };
+
+  const actualizarDescripcionAdicional = (id: string, descripcion: string) => {
+    setFotosAdicionales(prev => prev.map(bloque => 
+      bloque.id === id ? { ...bloque, descripcion } : bloque
+    ));
+  };
+
+  const agregarFotoAdicional = (id: string, file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFotosAdicionales(prev => prev.map(bloque => {
+        if (bloque.id === id && bloque.fotos.length < 5) {
+          return {
+            ...bloque,
+            fotos: [...bloque.fotos, file],
+            previews: [...bloque.previews, reader.result as string]
+          };
+        }
+        return bloque;
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const eliminarFotoAdicional = (bloqueId: string, fotoIndex: number) => {
+    setFotosAdicionales(prev => prev.map(bloque => {
+      if (bloque.id === bloqueId) {
+        return {
+          ...bloque,
+          fotos: bloque.fotos.filter((_, i) => i !== fotoIndex),
+          previews: bloque.previews.filter((_, i) => i !== fotoIndex)
+        };
+      }
+      return bloque;
+    }));
   };
 
   const buscarEquipoEnInventarioAhora = async (esnValue: string) => {
@@ -530,11 +538,18 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
 
       const marcaSeleccionada = marcas.find((m) => m.id === parseInt(marcaId, 10));
       const modeloSeleccionado = modelos.find((m) => m.id === parseInt(modeloId, 10));
+      
+      const nombreMarcaFinal = marcaId === VIRTUAL_MARCA_ID.toString() 
+        ? marcaPrecargadaNombre 
+        : marcaSeleccionada?.name;
+      const nombreModeloFinal = modeloId === VIRTUAL_MODELO_ID.toString()
+        ? modeloPrecargadoNombre
+        : modeloSeleccionado?.name;
 
       const datosPrefolio = {
         prefolio_realizado: true,
-        asset_marca: marcaSeleccionada?.name || undefined,
-        asset_submarca: modeloSeleccionado?.name || undefined,
+        asset_marca: nombreMarcaFinal || undefined,
+        asset_submarca: nombreModeloFinal || undefined,
         asset_vin: vin,
         vehicle_odometer: parseFloat(odometro) || 0,
         asset_placas: placas,
@@ -556,13 +571,19 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
         return;
       }
 
+      const fotosAdicionalesParaSubir = fotosAdicionales
+        .filter(b => b.fotos.length > 0)
+        .map(b => ({ descripcion: b.descripcion, fotos: b.fotos }));
+
       const resultadoFotos = await guardarPrefolioFotos(
         expediente.id,
+        expediente.appointment_name || '',
         fotosVehiculo,
         fotoOdometro,
         fotoVin,
         fotoPlacas,
-        fotoTablero
+        fotoTablero,
+        fotosAdicionalesParaSubir
       );
 
       if (!resultadoFotos.success) {
@@ -579,6 +600,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
       const vinCambio = vinNuevo.length > 0 && vinNuevo !== vinOriginal;
 
       // Verificar otros cambios de vehículo (solo si realmente cambiaron)
+      // NOTA: El odómetro se excluye explícitamente de esta validación
       const placasOriginal = (expediente.asset_placas || '').trim().toUpperCase();
       const placasNuevo = placas.trim().toUpperCase();
       const colorOriginal = (expediente.asset_color || '').trim().toLowerCase();
@@ -587,16 +609,35 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
       const economicoNuevo = numeroEconomico.trim();
       const añoOriginal = (expediente.vehicle_year || '').trim();
       const añoNuevo = año.trim();
-      const odometroOriginal = expediente.vehicle_odometer || 0;
-      const odometroNuevo = parseFloat(odometro) || 0;
+      
+      // Comparar marca y modelo contra valores precargados
+      const marcaOriginal = (expediente.vehicle_brand || '').trim().toLowerCase();
+      const marcaNueva = (marcaSeleccionada?.name || '').trim().toLowerCase();
+      const modeloOriginal = (expediente.vehicle_model || '').trim().toLowerCase();
+      const modeloNuevo = (modeloSeleccionado?.name || '').trim().toLowerCase();
 
+      // Detectar cambios: si el nuevo valor tiene contenido y difiere del original
+      // Esto también detecta cuando se completa un campo que venía nulo/vacío
       const cambioPlacas = placasNuevo.length > 0 && placasNuevo !== placasOriginal;
       const cambioColor = colorNuevo.length > 0 && colorNuevo !== colorOriginal;
       const cambioEconomico = economicoNuevo.length > 0 && economicoNuevo !== economicoOriginal;
       const cambioAño = añoNuevo.length > 0 && añoNuevo !== añoOriginal;
-      const cambioOdometro = odometroNuevo > 0 && odometroNuevo !== odometroOriginal;
+      const cambioMarca = marcaNueva.length > 0 && marcaNueva !== marcaOriginal;
+      const cambioModelo = modeloNuevo.length > 0 && modeloNuevo !== modeloOriginal;
 
-      const otrosCambios = cambioPlacas || cambioColor || cambioEconomico || cambioAño || cambioOdometro;
+      // El odómetro se excluye de la detección de cambios para edit_asset
+      const otrosCambios = cambioPlacas || cambioColor || cambioEconomico || cambioAño || cambioMarca || cambioModelo;
+      
+      if (otrosCambios) {
+        console.log('📋 [PREFOLIO] Cambios detectados:', {
+          placas: cambioPlacas,
+          color: cambioColor,
+          economico: cambioEconomico,
+          año: cambioAño,
+          marca: cambioMarca,
+          modelo: cambioModelo
+        });
+      }
 
       // Enviar webhook de CreateAsset si VIN cambió
       if (vinCambio) {
@@ -606,6 +647,11 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
           work_order_name: expediente.work_order_name || '',
           esn: esn,
           technician_email: expediente.email_tecnico || '',
+          company_Id: expediente.company_Id || '',
+          expediente_id: expediente.id,
+          appointment_id: expediente.appointment_id || '',
+          asset_id: expediente.asset_name || '',
+          onLogConsola,
           asset_data: {
             vin: vinNuevo,
             vin_original: vinOriginal,
@@ -626,12 +672,18 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
         }
       } else if (otrosCambios && !vinCambio) {
         // Enviar webhook de EditAsset si hay otros cambios (pero no VIN)
+        // Incluye todos los datos del vehículo, no solo los modificados
         console.log('🔔 [PREFOLIO] Datos de vehículo cambiaron - enviando webhook EditAsset...');
         const resultadoAsset = await notificarEdicionAsset({
           appointment_name: expediente.appointment_name || '',
           work_order_name: expediente.work_order_name || '',
           esn: esn,
           technician_email: expediente.email_tecnico || '',
+          company_Id: expediente.company_Id || '',
+          expediente_id: expediente.id,
+          appointment_id: expediente.appointment_id || '',
+          asset_id: expediente.asset_name || '',
+          onLogConsola,
           asset_data: {
             vin: vinNuevo || undefined,
             placas: placas || undefined,
@@ -658,7 +710,10 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
         appointment_name: expediente.appointment_name || '',
         work_order_name: expediente.work_order_name || '',
         esn: esn,
-        technician_email: expediente.email_tecnico || ''
+        technician_email: expediente.email_tecnico || '',
+        company_Id: expediente.company_Id || '',
+        expediente_id: expediente.id,
+        onLogConsola
       });
 
       if (!resultadoTransicion.success) {
@@ -804,10 +859,18 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
                 onChange={(e) => {
                   setMarcaId(e.target.value);
                   setModeloId('');
+                  if (e.target.value !== VIRTUAL_MARCA_ID.toString()) {
+                    setMarcaPrecargadaNombre(null);
+                  }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Seleccione una marca</option>
+                {marcaPrecargadaNombre && (
+                  <option key={VIRTUAL_MARCA_ID} value={VIRTUAL_MARCA_ID}>
+                    {marcaPrecargadaNombre} (precargado)
+                  </option>
+                )}
                 {marcas.map((marca) => (
                   <option key={marca.id} value={marca.id}>
                     {marca.name}
@@ -822,10 +885,20 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
               </label>
               <select
                 value={modeloId}
-                onChange={(e) => setModeloId(e.target.value)}
+                onChange={(e) => {
+                  setModeloId(e.target.value);
+                  if (e.target.value !== VIRTUAL_MODELO_ID.toString()) {
+                    setModeloPrecargadoNombre(null);
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Seleccione un modelo</option>
+                {modeloPrecargadoNombre && (
+                  <option key={VIRTUAL_MODELO_ID} value={VIRTUAL_MODELO_ID}>
+                    {modeloPrecargadoNombre} (precargado)
+                  </option>
+                )}
                 {modelosFiltrados.map((modelo) => (
                   <option key={modelo.id} value={modelo.id}>
                     {modelo.name}
@@ -1225,6 +1298,100 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose }: Pre
               </div>
             )}
           </div>
+        </section>
+
+        <section className="pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Fotos Adicionales
+            </h3>
+            {fotosAdicionales.length < 5 && (
+              <button
+                type="button"
+                onClick={agregarBloqueAdicional}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Agregar foto
+              </button>
+            )}
+          </div>
+
+          {fotosAdicionales.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">
+              No hay fotos adicionales. Usa el botón "Agregar foto" si necesitas documentar algo extra.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {fotosAdicionales.map((bloque, index) => (
+                <div key={bloque.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-700">Foto adicional {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => eliminarBloqueAdicional(bloque.id)}
+                      className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    placeholder="Descripción (ej: Daño preexistente en puerta)"
+                    value={bloque.descripcion}
+                    onChange={(e) => actualizarDescripcionAdicional(bloque.id, e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {bloque.previews.map((preview, fotoIndex) => (
+                      <div key={fotoIndex} className="relative w-20 h-20">
+                        <img
+                          src={preview}
+                          alt={`Foto ${fotoIndex + 1}`}
+                          className="w-full h-full object-cover rounded-lg border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => eliminarFotoAdicional(bloque.id, fotoIndex)}
+                          className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {bloque.fotos.length < 5 && (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            agregarFotoAdicional(bloque.id, e.target.files[0]);
+                          }
+                          e.target.value = '';
+                        }}
+                        className="hidden"
+                        id={`foto-adicional-prefolio-${bloque.id}`}
+                      />
+                      <label
+                        htmlFor={`foto-adicional-prefolio-${bloque.id}`}
+                        className="flex items-center justify-center gap-2 px-3 py-2 bg-white text-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-300 text-sm"
+                      >
+                        <Camera className="w-4 h-4" />
+                        <span>Agregar foto ({bloque.fotos.length}/5)</span>
+                      </label>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {error && (

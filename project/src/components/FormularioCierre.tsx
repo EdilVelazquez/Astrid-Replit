@@ -9,6 +9,7 @@ interface FormularioCierreProps {
   expediente: ExpedienteServicio;
   onCompleted: () => void;
   onCancel?: () => void;
+  onLogConsola?: (msg: string) => void;
 }
 
 interface FotoAdicional {
@@ -25,7 +26,7 @@ interface FotoObligatoria {
   preview: string;
 }
 
-export function FormularioCierre({ expediente, onCompleted, onCancel }: FormularioCierreProps) {
+export function FormularioCierre({ expediente, onCompleted, onCancel, onLogConsola }: FormularioCierreProps) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -171,11 +172,15 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
     try {
       console.log('📝 [CIERRE] Guardando datos del formulario de cierre...');
 
-      const resultadoDatos = await guardarCierreDatosParciales(expediente.id, {
-        tipo_corte: tipoCorte,
-        nombre_recibe: nombreRecibe.trim(),
-        firma_data_url: firmaDataUrl!,
-      });
+      const resultadoDatos = await guardarCierreDatosParciales(
+        expediente.id,
+        expediente.appointment_name || '',
+        {
+          tipo_corte: tipoCorte,
+          nombre_recibe: nombreRecibe.trim(),
+          firma_data_url: firmaDataUrl!,
+        }
+      );
 
       if (!resultadoDatos.success) {
         setError(`Error al guardar datos: ${resultadoDatos.error}`);
@@ -195,6 +200,7 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
 
       const resultadoFotos = await guardarCierreFotos(
         expediente.id,
+        expediente.appointment_name || '',
         fotosObligatoriasParaSubir,
         fotosAdicionalesParaSubir,
         fotoPersonaRecibe
@@ -224,7 +230,10 @@ export function FormularioCierre({ expediente, onCompleted, onCancel }: Formular
         appointment_name: expediente.appointment_name || '',
         work_order_name: expediente.work_order_name || '',
         esn: expediente.device_esn || '',
-        technician_email: expediente.email_tecnico || ''
+        technician_email: expediente.email_tecnico || '',
+        company_Id: expediente.company_Id || '',
+        expediente_id: expediente.id,
+        onLogConsola
       });
 
       if (!resultadoTransicion.success) {

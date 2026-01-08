@@ -12,6 +12,7 @@ import { generarExpedienteId, obtenerSesionPorExpediente, reiniciarSesion, crear
 import { enviarDatosFinalesWebhook } from './services/webhookService';
 import { reiniciarServicioDePruebas, esServicioDePruebas } from './services/testServiceService';
 import { buscarEquipoEnInventario } from './services/zohoInventoryService';
+import { obtenerDatosCierre, marcarAvanceACierre, eliminarDatosCierre } from './services/cierreService';
 import { useAuth } from './contexts/AuthContext';
 import { X } from 'lucide-react';
 import { Header } from './components/Header';
@@ -56,6 +57,7 @@ function TechnicianApp() {
   const [mostrarMisServicios, setMostrarMisServicios] = useState(false);
   const [mostrarModalReiniciarServicio, setMostrarModalReiniciarServicio] = useState(false);
   const [pendingEsnDuplicado, setPendingEsnDuplicado] = useState<{ esn: string; woInfo: string; callback: () => void } | null>(null);
+  const [serviciosConCheckIn, setServiciosConCheckIn] = useState<Set<number>>(new Set());
   const [pendingCambioDispositivo, setPendingCambioDispositivo] = useState<{ nuevoESN: string; motivo: string; descripcion: string; woInfo: string } | null>(null);
 
 
@@ -270,6 +272,11 @@ function TechnicianApp() {
       }
 
       agregarLogConsola('✅ Sesión de pruebas reseteada correctamente');
+      
+      // CRÍTICO: Eliminar datos de cierre si existen (invalida checkpoint de Documentación final)
+      agregarLogConsola('🗑️ Eliminando datos de cierre (si existen)...');
+      await eliminarDatosCierre(state.expediente_actual.id);
+      
       agregarLogConsola('💾 Actualizando expediente con nuevo dispositivo y datos de CRM...');
 
       const exitoRegistro = await registrarCambioDispositivo(
@@ -290,11 +297,12 @@ function TechnicianApp() {
       }
 
       agregarLogConsola('✅ Expediente actualizado con datos del nuevo dispositivo');
-      agregarLogConsola('🔄 Reiniciando contexto del servicio...');
+      agregarLogConsola('🔄 Reiniciando contexto - TODAS las pruebas deben repetirse...');
 
       dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
       setPruebasCompletadas(false);
       setMostrarFormularioCierre(false);
+      setPruebasBloqueadas(false);
 
       const esNuevoEsnDePrueba = nuevoESN === '000000000000000';
 
@@ -398,6 +406,11 @@ function TechnicianApp() {
       }
 
       agregarLogConsola('✅ Sesión de pruebas reseteada correctamente');
+      
+      // CRÍTICO: Eliminar datos de cierre si existen (invalida checkpoint de Documentación final)
+      agregarLogConsola('🗑️ Eliminando datos de cierre (si existen)...');
+      await eliminarDatosCierre(state.expediente_actual.id);
+      
       agregarLogConsola('💾 Actualizando expediente con nuevo dispositivo y datos de CRM...');
 
       const exitoRegistro = await registrarCambioDispositivo(
@@ -418,11 +431,12 @@ function TechnicianApp() {
       }
 
       agregarLogConsola('✅ Expediente actualizado con datos del nuevo dispositivo');
-      agregarLogConsola('🔄 Reiniciando contexto del servicio...');
+      agregarLogConsola('🔄 Reiniciando contexto - TODAS las pruebas deben repetirse...');
 
       dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
       setPruebasCompletadas(false);
       setMostrarFormularioCierre(false);
+      setPruebasBloqueadas(false);
 
       const esNuevoEsnDePrueba = nuevoESN === '000000000000000';
 
@@ -530,6 +544,11 @@ function TechnicianApp() {
   };
 
   const handleSeleccionarServicioDesdeCalendario = async (servicio: ExpedienteServicio) => {
+    if (servicio.status === 'vuelta_en_falso') {
+      alert('Este servicio fue marcado como "Vuelta en falso" y no puede continuarse. Solo se podrá continuar cuando se genere un nuevo registro.');
+      return;
+    }
+
     const fechaServicio = servicio.scheduled_start_time
       ? formatearFechaLocal(new Date(servicio.scheduled_start_time))
       : '';
@@ -545,9 +564,22 @@ function TechnicianApp() {
       return;
     }
 
-    agregarLogConsola(`📋 Servicio seleccionado desde calendario: ${servicio.work_order_name} - ${servicio.appointment_name}`);
+    // La restauración del estado se maneja en el useEffect que observa state.expediente_actual
+    // Solo necesitamos establecer el expediente y ocultar el calendario
     dispatch({ type: 'SET_EXPEDIENTE', payload: servicio });
     setMostrarCalendario(false);
+  };
+
+  const handleServicioActualizado = (servicioActualizado: ExpedienteServicio) => {
+    setTodosLosServicios(prev => 
+      prev.map(s => s.id === servicioActualizado.id ? servicioActualizado : s)
+    );
+    
+    if (state.expediente_actual?.id === servicioActualizado.id) {
+      dispatch({ type: 'SET_EXPEDIENTE', payload: servicioActualizado });
+    }
+    
+    agregarLogConsola(`📋 Servicio actualizado: ${servicioActualizado.appointment_name} - Estado: ${servicioActualizado.status}`);
   };
 
   const handlePrefolioCompleted = async () => {
@@ -625,8 +657,26 @@ function TechnicianApp() {
       agregarLogConsola(`🔍 Estado del servicio: ${state.expediente_actual.prefolio_realizado ? 'INFORMACIÓN COMPLETADA' : 'INFORMACIÓN PENDIENTE'}`);
 
       if (state.expediente_actual.prefolio_realizado) {
-        agregarLogConsola(`✅ Información ya completada previamente - Listo para pruebas`);
+        agregarLogConsola(`✅ Información ya completada previamente`);
         setPrefolioCompletado(true);
+        
+        // VERIFICAR SI YA AVANZÓ A DOCUMENTACIÓN FINAL
+        const datosCierre = await obtenerDatosCierre(state.expediente_actual.id);
+        
+        if (datosCierre) {
+          agregarLogConsola(`📄 Datos de cierre encontrados - Restaurando a Documentación final`);
+          setMostrarFormularioCierre(true);
+          setPruebasCompletadas(true);
+          setPruebasBloqueadas(true);
+          
+          // Restaurar ESN si existe
+          if (state.expediente_actual.device_esn) {
+            dispatch({ type: 'SET_ESN', payload: state.expediente_actual.device_esn });
+            setEsnTemporal(state.expediente_actual.device_esn);
+          }
+        } else {
+          agregarLogConsola(`🔧 Sin datos de cierre - Mostrando pruebas del dispositivo`);
+        }
       } else {
         agregarLogConsola(`📝 Información pendiente - Mostrando formulario`);
       }
@@ -963,6 +1013,12 @@ function TechnicianApp() {
             servicios={todosLosServicios}
             onSeleccionarServicio={handleSeleccionarServicioDesdeCalendario}
             servicioActual={state.expediente_actual}
+            onServicioActualizado={handleServicioActualizado}
+            serviciosConCheckIn={serviciosConCheckIn}
+            onCheckInSuccess={(servicioId: number) => {
+              setServiciosConCheckIn(prev => new Set([...prev, servicioId]));
+            }}
+            onLogConsola={agregarLogConsola}
           />
         ) : (
           <div className="space-y-6">
@@ -1005,8 +1061,19 @@ function TechnicianApp() {
                   onErrorPanel={setErrorPanel}
                   onLogConsola={agregarLogConsola}
                   pruebasBloqueadas={pruebasBloqueadas}
-                  onPruebasCompletadas={() => {
+                  onPruebasCompletadas={async () => {
                     agregarLogConsola('✅ Técnico confirmó pruebas - avanzando a formulario de cierre');
+                    
+                    // Persistir el avance a cierre en la base de datos
+                    if (state.expediente_actual?.id) {
+                      const resultado = await marcarAvanceACierre(state.expediente_actual.id);
+                      if (resultado.success) {
+                        agregarLogConsola('📌 Checkpoint guardado: Documentación final');
+                      } else {
+                        agregarLogConsola(`⚠️ No se pudo guardar checkpoint: ${resultado.error}`);
+                      }
+                    }
+                    
                     setPruebasCompletadas(true);
                     setPruebasBloqueadas(true);
                     setMostrarFormularioCierre(true);

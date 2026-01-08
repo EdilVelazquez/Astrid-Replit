@@ -14,6 +14,7 @@ export interface ExpedienteServicio {
   asset_placas: string | null;
   asset_color: string | null;
   company_name: string | null;
+  company_Id: string | null;
   client_name: string | null;
   technician_name: string | null;
   technician_phone: string | null;
@@ -61,6 +62,7 @@ export interface ExpedienteServicio {
   check_in_latitude?: number | null;
   check_in_longitude?: number | null;
   check_in_distance?: number | null;
+  notes_terminate?: string | null;
 }
 
 export interface ValidationSummaryJSON {
@@ -156,9 +158,14 @@ export interface CheckInAttempt {
   attempt_timestamp?: string;
   latitude: number;
   longitude: number;
+  service_latitude?: number;
+  service_longitude?: number;
   distance_meters: number;
   was_successful: boolean;
   geofence_radius: number;
+  km_diferencia?: number;
+  checkin_location_reason?: 'ubicacion_unidad' | 'direccion_erronea' | 'otro' | null;
+  checkin_location_reason_other?: string | null;
 }
 
 export interface DeviceChangeData {
