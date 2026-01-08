@@ -16,6 +16,24 @@ export function CompletionMessage({ expediente, validationSummary }: CompletionM
     return '❌ Fallido';
   };
 
+  const fueRealizada = (resultado: string) => {
+    return resultado === 'exitoso';
+  };
+
+  const pruebasRealizadas = [
+    { nombre: 'Ignición', resultado: validationSummary.pruebas.ignicion },
+    { nombre: 'Bloqueo motor', resultado: validationSummary.pruebas.bloqueo },
+    { nombre: 'Desbloqueo motor', resultado: validationSummary.pruebas.desbloqueo },
+    { nombre: 'Buzzer activación', resultado: validationSummary.pruebas.buzzer_activacion },
+    { nombre: 'Buzzer desactivación', resultado: validationSummary.pruebas.buzzer_desactivacion },
+    { nombre: 'Botón de pánico', resultado: validationSummary.pruebas.boton_panico },
+    { nombre: 'Ubicación', resultado: validationSummary.pruebas.ubicacion },
+  ].filter(p => fueRealizada(p.resultado));
+
+  const pruebasParaTexto = pruebasRealizadas.length > 0 
+    ? pruebasRealizadas.map(p => `• ${p.nombre}: ${p.resultado}`).join('\n')
+    : '• No se realizaron pruebas';
+
   const formatearFecha = (isoString: string) => {
     const date = new Date(isoString);
     return date.toLocaleString('es-MX', {
@@ -37,13 +55,7 @@ export function CompletionMessage({ expediente, validationSummary }: CompletionM
 • ESN Dispositivo: ${validationSummary.device_esn}
 
 ✅ PRUEBAS REALIZADAS:
-• Ignición: ${validationSummary.pruebas.ignicion}
-• Bloqueo motor: ${validationSummary.pruebas.bloqueo}
-• Desbloqueo motor: ${validationSummary.pruebas.desbloqueo}
-• Buzzer activación: ${validationSummary.pruebas.buzzer_activacion}
-• Buzzer desactivación: ${validationSummary.pruebas.buzzer_desactivacion}
-• Botón de pánico: ${validationSummary.pruebas.boton_panico}
-• Ubicación: ${validationSummary.pruebas.ubicacion}
+${pruebasParaTexto}
 
 🚗 DATOS DEL VEHÍCULO:
 • Marca: ${validationSummary.detalles_vehiculo.marca}
@@ -97,15 +109,17 @@ Este servicio queda cerrado permanentemente.`;
             <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
               ✅ PRUEBAS REALIZADAS
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-              <p><span className="font-semibold">Ignición:</span> {formatearResultado(validationSummary.pruebas.ignicion)}</p>
-              <p><span className="font-semibold">Bloqueo motor:</span> {formatearResultado(validationSummary.pruebas.bloqueo)}</p>
-              <p><span className="font-semibold">Desbloqueo motor:</span> {formatearResultado(validationSummary.pruebas.desbloqueo)}</p>
-              <p><span className="font-semibold">Buzzer activación:</span> {formatearResultado(validationSummary.pruebas.buzzer_activacion)}</p>
-              <p><span className="font-semibold">Buzzer desactivación:</span> {formatearResultado(validationSummary.pruebas.buzzer_desactivacion)}</p>
-              <p><span className="font-semibold">Botón de pánico:</span> {formatearResultado(validationSummary.pruebas.boton_panico)}</p>
-              <p><span className="font-semibold">Ubicación:</span> {formatearResultado(validationSummary.pruebas.ubicacion)}</p>
-            </div>
+            {pruebasRealizadas.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                {pruebasRealizadas.map((prueba) => (
+                  <p key={prueba.nombre}>
+                    <span className="font-semibold">{prueba.nombre}:</span> {formatearResultado(prueba.resultado)}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No se realizaron pruebas en este servicio.</p>
+            )}
           </div>
 
           <div className="border-t border-gray-200 pt-4">
