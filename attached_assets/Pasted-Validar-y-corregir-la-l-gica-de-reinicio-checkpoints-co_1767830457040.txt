@@ -1,0 +1,73 @@
+Validar y corregir la lógica de reinicio / checkpoints considerando específicamente el registro especial de prueba y el comportamiento general del resto de servicios:
+
+1) Registro especial de prueba (único caso con reset total)
+
+Cuando el registro de prueba:
+
+Se finaliza, o
+
+Se marca como vuelta en falso, y luego
+
+Se reinicia / regenera
+
+Entonces debe reiniciarse a 0 completamente, como si nunca se hubiera hecho nada.
+
+Requisito obligatorio (solo para el registro de prueba)
+
+Al reiniciar/regenerar el registro de prueba, se debe limpiar todo:
+
+Check-in (debe volver a NO realizado)
+
+Datos capturados del preformulario
+
+ESN
+
+Pruebas pasivas y activas
+
+Flags de completado
+
+Checkpoints (current_stage, tests_completed, etc.)
+
+Cualquier estado que permita saltarse pasos
+
+Problema actual a corregir
+
+Al finalizar un servicio de prueba, regresa con check-in ya realizado.
+
+Las pruebas se están saltando (no obliga a hacerlas de nuevo).
+
+Esto indica que no se están reseteando correctamente los checkpoints.
+
+Debe revisarse el paso a paso y la persistencia de estado para que el registro de prueba siempre vuelva al punto inicial real (0).
+
+2) Resto de servicios (no reset total)
+
+Para servicios normales:
+
+NO debe existir reset total automático.
+
+Solo validar que los checkpoints funcionen correctamente:
+
+Comportamiento esperado
+
+Cuando se “regresa” o se “reanuda” un servicio:
+
+Debe regresar exactamente al checkpoint guardado.
+
+Debe omitir lo posterior a ese punto.
+
+No debe saltarse pasos anteriores.
+
+No debe mantener validaciones de etapas futuras.
+
+Esto debe respetar el comportamiento corregido recientemente (regresar al checkpoint correcto y no recalcular etapas anteriores/posteriores incorrectamente).
+
+Objetivo final
+
+El registro de prueba siempre vuelve a 0 real (sin check-in, sin pruebas marcadas, sin avances).
+
+Los servicios normales conservan progreso, pero al reanudar o regresar:
+
+caen al checkpoint correcto
+
+y todo lo posterior queda invalidado/omitido hasta que se vuelva a completar.

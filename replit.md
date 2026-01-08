@@ -176,6 +176,30 @@ El sistema registra automáticamente cada envío de webhook para auditoría y tr
 - `webhook_logs` - Almacena todos los registros
 - Índices por expediente_id, appointment_name, timestamp, action
 
+## Sistema de Reinicio de Servicios de Prueba (Actualizado 2026-01-08)
+
+### Comportamiento del servicio de prueba (is_test_service = true)
+- Al **finalizar** o marcar como **"vuelta en falso"**, el servicio se reinicia automáticamente
+- El reinicio es **TOTAL** - vuelve al estado inicial como si nunca se hubiera hecho nada:
+  - ❌ Check-in eliminado (check_in_timestamp, coordenadas, distancia)
+  - ❌ Datos del prefolio eliminados (vehículo, ESN, fotos)
+  - ❌ Sesión de pruebas eliminada (device_test_sessions)
+  - ❌ Datos de cierre eliminados (cierre_data)
+  - ❌ Fotos del prefolio eliminadas (prefolio_data)
+  - ❌ Logs de webhooks eliminados (webhook_logs)
+  - ❌ Notas de terminate eliminadas
+
+### Servicios normales (is_test_service = false)
+- **NO tienen reinicio automático** al finalizar
+- Al reanudar, restauran el checkpoint exacto donde quedaron:
+  - Prefolio completado → Pruebas del dispositivo
+  - Pruebas completadas → Documentación final
+  - Lo anterior queda preservado, lo posterior invalidado
+
+### Función RPC: `reset_test_service(service_id)`
+- Ubicación: `supabase/migrations/20260108000000_fix_reset_test_service.sql`
+- Limpia todas las tablas relacionadas y resetea el expediente
+
 ## Notas de Desarrollo
 - La app requiere conexión a un proyecto Supabase externo existente
 - Las migraciones en `/supabase/migrations/` definen el esquema de BD
