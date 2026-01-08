@@ -340,3 +340,42 @@ export async function marcarAvanceACierre(
     return { success: false, error: 'Error inesperado al marcar avance' };
   }
 }
+
+/**
+ * Elimina los datos de cierre de un expediente (usado al cambiar dispositivo)
+ * Esto invalida el checkpoint de Documentación final
+ */
+export async function eliminarDatosCierre(expedienteId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log('🗑️ [CIERRE] Eliminando datos de cierre para expediente:', expedienteId);
+    
+    const { error } = await supabase
+      .from('cierre_data')
+      .delete()
+      .eq('expediente_id', expedienteId);
+    
+    if (error) {
+      console.error('❌ [CIERRE] Error al eliminar datos de cierre:', error);
+      return { success: false, error: error.message };
+    }
+    
+    // También resetear flag de pruebas completadas en expedientes_servicio
+    const { error: expError } = await supabase
+      .from('expedientes_servicio')
+      .update({
+        pruebas_completadas: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', expedienteId);
+    
+    if (expError) {
+      console.warn('⚠️ [CIERRE] No se pudo resetear pruebas_completadas:', expError);
+    }
+    
+    console.log('✅ [CIERRE] Datos de cierre eliminados exitosamente');
+    return { success: true };
+  } catch (err) {
+    console.error('❌ [CIERRE] Error inesperado al eliminar datos de cierre:', err);
+    return { success: false, error: 'Error inesperado' };
+  }
+}

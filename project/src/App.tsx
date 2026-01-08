@@ -12,7 +12,7 @@ import { generarExpedienteId, obtenerSesionPorExpediente, reiniciarSesion, crear
 import { enviarDatosFinalesWebhook } from './services/webhookService';
 import { reiniciarServicioDePruebas, esServicioDePruebas } from './services/testServiceService';
 import { buscarEquipoEnInventario } from './services/zohoInventoryService';
-import { obtenerDatosCierre, marcarAvanceACierre } from './services/cierreService';
+import { obtenerDatosCierre, marcarAvanceACierre, eliminarDatosCierre } from './services/cierreService';
 import { useAuth } from './contexts/AuthContext';
 import { X } from 'lucide-react';
 import { Header } from './components/Header';
@@ -272,6 +272,11 @@ function TechnicianApp() {
       }
 
       agregarLogConsola('✅ Sesión de pruebas reseteada correctamente');
+      
+      // CRÍTICO: Eliminar datos de cierre si existen (invalida checkpoint de Documentación final)
+      agregarLogConsola('🗑️ Eliminando datos de cierre (si existen)...');
+      await eliminarDatosCierre(state.expediente_actual.id);
+      
       agregarLogConsola('💾 Actualizando expediente con nuevo dispositivo y datos de CRM...');
 
       const exitoRegistro = await registrarCambioDispositivo(
@@ -292,11 +297,12 @@ function TechnicianApp() {
       }
 
       agregarLogConsola('✅ Expediente actualizado con datos del nuevo dispositivo');
-      agregarLogConsola('🔄 Reiniciando contexto del servicio...');
+      agregarLogConsola('🔄 Reiniciando contexto - TODAS las pruebas deben repetirse...');
 
       dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
       setPruebasCompletadas(false);
       setMostrarFormularioCierre(false);
+      setPruebasBloqueadas(false);
 
       const esNuevoEsnDePrueba = nuevoESN === '000000000000000';
 
@@ -400,6 +406,11 @@ function TechnicianApp() {
       }
 
       agregarLogConsola('✅ Sesión de pruebas reseteada correctamente');
+      
+      // CRÍTICO: Eliminar datos de cierre si existen (invalida checkpoint de Documentación final)
+      agregarLogConsola('🗑️ Eliminando datos de cierre (si existen)...');
+      await eliminarDatosCierre(state.expediente_actual.id);
+      
       agregarLogConsola('💾 Actualizando expediente con nuevo dispositivo y datos de CRM...');
 
       const exitoRegistro = await registrarCambioDispositivo(
@@ -420,11 +431,12 @@ function TechnicianApp() {
       }
 
       agregarLogConsola('✅ Expediente actualizado con datos del nuevo dispositivo');
-      agregarLogConsola('🔄 Reiniciando contexto del servicio...');
+      agregarLogConsola('🔄 Reiniciando contexto - TODAS las pruebas deben repetirse...');
 
       dispatch({ type: 'RESET_PRUEBAS_PARA_CAMBIO_DISPOSITIVO' });
       setPruebasCompletadas(false);
       setMostrarFormularioCierre(false);
+      setPruebasBloqueadas(false);
 
       const esNuevoEsnDePrueba = nuevoESN === '000000000000000';
 
