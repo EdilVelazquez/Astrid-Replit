@@ -52,14 +52,19 @@ project/
 1. Técnico inicia sesión (Supabase Auth)
 2. Ve calendario con servicios asignados
 3. **Check-In con Geocerca (OBLIGATORIO)**: Técnico hace clic en "Check-In" para confirmar llegada
-   - Obtiene ubicación GPS del dispositivo
+   - Obtiene ubicación GPS real del dispositivo (navigator.geolocation con enableHighAccuracy: true, maximumAge: 0)
    - Valida que esté dentro de 200 metros del punto de servicio (usando coordenadas service_latitude/service_longitude)
    - **Datos guardados en expedientes_servicio:**
      - `check_in_timestamp` - Fecha/hora del check-in
      - `check_in_latitude`, `check_in_longitude` - Coordenadas del técnico
      - `check_in_distance` - Distancia en metros al punto de servicio
-     - `technician_location_checkin` - Ubicación en formato "lat,lng"
-     - `km_diferencia_checkin` - Distancia en kilómetros
+   - **Datos guardados en check_in_attempts (historial completo):**
+     - `appointment_name` - Nombre de la cita
+     - `latitude`, `longitude` - Coordenadas GPS reales del técnico
+     - `distance_meters` - Distancia en metros al punto de servicio
+     - `km_diferencia` - Distancia en kilómetros
+     - `was_successful` - Si el check-in fue exitoso
+     - `geofence_radius` - Radio de geocerca usado (200m)
      - `checkin_location_reason` - Motivo si ubicación no coincide (ubicacion_unidad, direccion_erronea, otro, null)
      - `checkin_location_reason_other` - Texto libre cuando motivo es "otro"
    - **Si ubicación NO coincide** (fuera de 200m):

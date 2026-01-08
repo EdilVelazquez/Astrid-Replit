@@ -46,16 +46,25 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     latitude: number,
     longitude: number,
     distanceMeters: number,
-    wasSuccessful: boolean
+    wasSuccessful: boolean,
+    reason?: LocationReason,
+    reasonOther?: string
   ): Promise<boolean> => {
+    const kmDiferencia = distanceMeters / 1000;
+    
     const attempt: Omit<CheckInAttempt, 'id' | 'attempt_timestamp'> = {
       appointment_name: appointmentName,
       latitude,
       longitude,
       distance_meters: distanceMeters,
       was_successful: wasSuccessful,
-      geofence_radius: GEOFENCE_RADIUS
+      geofence_radius: GEOFENCE_RADIUS,
+      km_diferencia: parseFloat(kmDiferencia.toFixed(3)),
+      checkin_location_reason: reason || null,
+      checkin_location_reason_other: (reason === 'otro' && reasonOther) ? reasonOther : null,
     };
+
+    console.log('📍 [CHECK-IN] Guardando intento en check_in_attempts:', attempt);
 
     const { error } = await supabase
       .from('check_in_attempts')
@@ -73,26 +82,18 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
 
   const saveCheckInToDatabase = async (
     location: Coordinates, 
-    distanceMeters: number,
-    reason?: LocationReason,
-    reasonOther?: string
+    distanceMeters: number
   ) => {
     setSaving(true);
-    
-    const distanceKm = distanceMeters / 1000;
     
     const checkInData: Record<string, unknown> = {
       check_in_timestamp: new Date().toISOString(),
       check_in_latitude: location.latitude,
       check_in_longitude: location.longitude,
       check_in_distance: distanceMeters,
-      technician_location_checkin: `${location.latitude},${location.longitude}`,
-      km_diferencia_checkin: parseFloat(distanceKm.toFixed(3)),
-      checkin_location_reason: reason || null,
-      checkin_location_reason_other: (reason === 'otro' && reasonOther) ? reasonOther : null,
     };
 
-    console.log('📍 [CHECK-IN] Guardando datos:', checkInData);
+    console.log('📍 [CHECK-IN] Guardando en expedientes_servicio:', checkInData);
 
     const { error } = await supabase
       .from('expedientes_servicio')
@@ -142,15 +143,12 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       pendingCheckInData.location.latitude,
       pendingCheckInData.location.longitude,
       pendingCheckInData.distance,
-      true
-    );
-    
-    await saveCheckInToDatabase(
-      pendingCheckInData.location, 
-      pendingCheckInData.distance,
+      true,
       locationReason,
       locationReasonOther
     );
+    
+    await saveCheckInToDatabase(pendingCheckInData.location, pendingCheckInData.distance);
   };
   
   const canConfirmOverride = locationReason !== '' && (locationReason !== 'otro' || locationReasonOther.trim() !== '');

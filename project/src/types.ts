@@ -161,6 +161,9 @@ export interface CheckInAttempt {
   distance_meters: number;
   was_successful: boolean;
   geofence_radius: number;
+  km_diferencia?: number;
+  checkin_location_reason?: 'ubicacion_unidad' | 'direccion_erronea' | 'otro' | null;
+  checkin_location_reason_other?: string | null;
 }
 
 export interface DeviceChangeData {
