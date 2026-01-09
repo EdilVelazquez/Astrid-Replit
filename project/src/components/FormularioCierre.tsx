@@ -238,14 +238,8 @@ export function FormularioCierre({ expediente, onCompleted, onCancel, onLogConso
 
       if (!resultadoTransicion.success) {
         console.error('❌ [CIERRE] Error al enviar notificación de completado:', resultadoTransicion.error);
-        const confirmar = confirm(
-          `El formulario se guardó correctamente, pero hubo un error al notificar la finalización del trabajo:\n\n${resultadoTransicion.error}\n\n¿Deseas continuar de todas formas?`
-        );
-
-        if (!confirmar) {
-          setGuardando(false);
-          return;
-        }
+        // Continuar de todas formas - el error del webhook no debe bloquear al técnico
+        console.warn('⚠️ [CIERRE] Continuando a pesar del error de webhook...');
       } else {
         console.log('✅ [CIERRE] Notificación de trabajo completado enviada exitosamente');
       }

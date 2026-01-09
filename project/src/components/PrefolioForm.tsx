@@ -698,6 +698,7 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose, onLog
 
         if (!resultadoAsset.success) {
           console.error('❌ [PREFOLIO] Error al enviar EditAsset:', resultadoAsset.error);
+          // Solo log, no bloquea el flujo - edit_asset es informativo
         } else {
           console.log('✅ [PREFOLIO] Webhook EditAsset enviado exitosamente');
         }
@@ -718,14 +719,8 @@ export function PrefolioForm({ expediente, onCompleted, onClose: _onClose, onLog
 
       if (!resultadoTransicion.success) {
         console.error('❌ [PREFOLIO] Error al enviar notificación de inicio:', resultadoTransicion.error);
-        const confirmar = confirm(
-          `El prefolio se guardó correctamente, pero hubo un error al notificar el inicio del trabajo:\n\n${resultadoTransicion.error}\n\n¿Deseas continuar de todas formas?`
-        );
-
-        if (!confirmar) {
-          setGuardando(false);
-          return;
-        }
+        // Continuar de todas formas - el error del webhook no debe bloquear al técnico
+        console.warn('⚠️ [PREFOLIO] Continuando a pesar del error de webhook...');
       } else {
         console.log('✅ [PREFOLIO] Notificación de inicio de trabajo enviada exitosamente');
       }
