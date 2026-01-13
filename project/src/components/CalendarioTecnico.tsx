@@ -703,6 +703,7 @@ function TarjetaServicio({
   const yaHizoCheckIn = !!servicio.check_in_timestamp || checkInRealizado;
   const puedeHacerCheckIn = puedeIniciar && estado.estado === 'pendiente' && !yaHizoCheckIn && !servicioVueltaEnFalso;
   const puedeVolverEnFalso = yaHizoCheckIn && estado.estado === 'pendiente' && !servicioVueltaEnFalso;
+  const esServicioPrueba = servicio.is_test_service === true || servicio.appointment_name?.startsWith('AP-TEST-');
 
   const getStatusIndicator = () => {
     if (servicioVueltaEnFalso) return {
@@ -832,21 +833,23 @@ function TarjetaServicio({
                     <XCircle className="w-4 h-4" />
                     Bloqueado
                   </span>
-                  <button
-                    onClick={() => onReiniciarServicio(servicio)}
-                    className="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors border border-gray-300 flex items-center gap-1.5"
-                    title="Reiniciar servicio para permitir nueva ejecución"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Reiniciar
-                  </button>
+                  {esServicioPrueba && (
+                    <button
+                      onClick={() => onReiniciarServicio(servicio)}
+                      className="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors border border-gray-300 flex items-center gap-1.5"
+                      title="Reiniciar servicio de prueba"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Reiniciar
+                    </button>
+                  )}
                 </>
               )}
-              {estado.estado === 'completado' && (
+              {estado.estado === 'completado' && esServicioPrueba && (
                 <button
                   onClick={() => onReiniciarServicio(servicio)}
                   className="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors border border-gray-300 flex items-center gap-1.5"
-                  title="Reiniciar servicio para permitir nueva ejecución"
+                  title="Reiniciar servicio de prueba"
                 >
                   <RefreshCw className="w-4 h-4" />
                   Reiniciar

@@ -15,7 +15,7 @@ interface CheckInModalProps {
   onCheckInSuccess: (servicio: ExpedienteServicio) => void;
 }
 
-type CheckInState = 'idle' | 'requesting' | 'success' | 'denied' | 'confirm_override' | 'error' | 'no_coords';
+type CheckInState = 'idle' | 'requesting' | 'success' | 'denied' | 'confirm_override' | 'error' | 'no_coords' | 'db_error';
 type LocationReason = 'ubicacion_unidad' | 'direccion_erronea' | 'otro' | '';
 
 const LOCATION_REASON_OPTIONS = [
@@ -107,7 +107,7 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       if (isTestService) {
         console.log('🧪 [CHECK-IN] Servicio de prueba - continuando a pesar del error de BD');
       } else {
-        setCheckInState('error');
+        setCheckInState('db_error');
         setSaving(false);
         return;
       }
@@ -238,6 +238,8 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
     setDistance(null);
     setUserLocation(null);
     setPendingCheckInData(null);
+    setLocationReason('');
+    setLocationReasonOther('');
     resetState();
   };
 
@@ -406,7 +408,37 @@ export function CheckInModal({ isOpen, onClose, servicio, onCheckInSuccess }: Ch
       );
     }
 
-    const gpsHasError = !isTestService && (gpsStatus === 'error' || gpsStatus === 'denied');
+    if (checkInState === 'db_error') {
+      return (
+        <div className="text-center py-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Error al guardar
+          </h3>
+          <p className="text-gray-600 text-sm mb-4">
+            No se pudo guardar el check-in. Intenta de nuevo o contacta al administrador.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={handleRetry}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Reintentar
+            </button>
+            <button
+              onClick={handleClose}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const gpsHasError = !isTestService && !userLocation && (gpsStatus === 'error' || gpsStatus === 'denied');
     if (checkInState === 'error' || gpsHasError) {
       return (
         <div className="text-center py-6">
